@@ -1,5 +1,6 @@
 import { promises as dns } from "dns";
 import type { TrustSignal } from "@/lib/trust/types";
+import { hostsMatch, resolveRedirectHost } from "@/lib/trust/redirect";
 import {
   generateTypoLabels,
   levenshtein,
@@ -34,6 +35,15 @@ const KNOWN_BRANDS = [
   { brand: "ideal.nl", needles: ["ideal-login", "idealbetalen"] },
 ];
 
+const KNOWN_SET = new Set(KNOWN_BRANDS.map((b) => b.brand));
+
+function normalizeCanonical(host: string): string {
+  // Collapse www. and match known brand apex when possible
+  const bare = host.toLowerCase().replace(/^www\./, "");
+  if (KNOWN_SET.has(bare)) return bare;
+  return bare;
+}
+
 async function resolves(domain: string): Promise<boolean> {
   try {
     const a = await resolver.resolve4(domain);
@@ -48,178 +58,281 @@ async function resolves(domain: string): Promise<boolean> {
   }
 }
 
-function detectKnownBrand(domain: string): {
-  hit: string | null;
-  method: string;
-} {
-  const lower = domain.toLowerCase();
-  for (const entry of KNOWN_BRANDS) {
-    if (lower === entry.brand) {
-      return { hit: null, method: "exact" };
-    }
-    for (const needle of entry.needles) {
-      if (lower.includes(needle) && lower !== entry.brand) {
-        // Avoid flagging the real brand domain itself via needle
-        if (lower === entry.brand) continue;
-        // yourhosting.nl contains needle — only flag if not exact brand
-        const brandLabel = entry.brand.split(".")[0] ?? "";
-        const domainLabel = splitDomain(lower).label;
-        if (domainLabel === brandLabel) continue;
-        if (
-          domainLabel.includes(needle.replace(/-/g, "")) ||
-          lower.includes(needle)
-        ) {
-          // Require similarity so "hostingprovider.nl" isn't false positive for hostnet
-          if (
-            levenshtein(domainLabel, brandLabel) <= 3 ||
-            domainLabel.includes(brandLabel) ||
-            brandLabel.includes(domainLabel)
-          ) {
-            return { hit: entry.brand, method: "needle" };
-          }
-        }
-      }
-    }
-    const brandHost = entry.brand.split(".")[0] ?? entry.brand;
-    const domainHost = splitDomain(lower).label;
-    if (
-      brandHost.length >= 4 &&
-      domainHost !== brandHost &&
-      levenshtein(domainHost, brandHost) <= 2 &&
-      Math.abs(domainHost.length - brandHost.length) <= 2
-    ) {
-      return { hit: entry.brand, method: "distance" };
-    }
-  }
-  return { hit: null, method: "none" };
+async function finalHost(domain: string): Promise<string | null> {
+  return resolveRedirectHost(domain);
 }
 
-async function findTyposquatTarget(domain: string): Promise<{
-  target: string;
+function isKnownBrand(domain: string): boolean {
+  return KNOWN_SET.has(domain.toLowerCase());
+}
+
+function findClosestKnownBrand(domain: string): {
+  brand: string;
+  distance: number;
+} | null {
+  const { label, tld } = splitDomain(domain);
+  let best: { brand: string; distance: number } | null = null;
+  for (const entry of KNOWN_BRANDS) {
+    const b = splitDomain(entry.brand);
+    if (b.tld !== tld) continue;
+    const distance = levenshtein(label, b.label);
+    if (distance < 1 || distance > 2) continue;
+    if (!best || distance < best.distance) {
+      best = { brand: entry.brand, distance };
+    }
+  }
+  return best;
+}
+
+type Lookalike = {
+  domain: string;
   distance: number;
   reason: string;
-} | null> {
-  const { label, tld } = splitDomain(domain);
-  if (!tld || label.length < 4) return null;
+};
 
-  const candidates = generateTypoLabels(label);
-  // Prefer collapsing doubles / deletions (distance 1) first
-  const ranked = candidates
+async function findLookalikes(domain: string): Promise<Lookalike[]> {
+  const { label, tld } = splitDomain(domain);
+  if (!tld || label.length < 4) return [];
+
+  const found: Lookalike[] = [];
+  const seen = new Set<string>();
+
+  // Known brands at edit distance 1–2
+  for (const entry of KNOWN_BRANDS) {
+    const b = splitDomain(entry.brand);
+    if (b.tld !== tld) continue;
+    const distance = levenshtein(label, b.label);
+    if (distance < 1 || distance > 2) continue;
+    if (seen.has(entry.brand)) continue;
+    if (!(await resolves(entry.brand))) continue;
+    seen.add(entry.brand);
+    found.push({
+      domain: entry.brand,
+      distance,
+      reason: "bekend merk met bijna-identieke spelling",
+    });
+  }
+
+  const ranked = generateTypoLabels(label)
     .map((c) => ({
       label: c,
       domain: `${c}.${tld}`,
       distance: levenshtein(label, c),
     }))
     .filter((c) => c.distance >= 1 && c.distance <= 2)
-    .sort((a, b) => a.distance - b.distance || a.label.length - b.label.length);
+    .sort((a, b) => a.distance - b.distance);
 
-  // Check known brands with same TLD first (fast path)
-  for (const entry of KNOWN_BRANDS) {
-    const b = splitDomain(entry.brand);
-    if (b.tld !== tld) continue;
-    const dist = levenshtein(label, b.label);
-    if (dist >= 1 && dist <= 2) {
-      const ok = await resolves(entry.brand);
-      if (ok) {
-        return {
-          target: entry.brand,
-          distance: dist,
-          reason: "bekend merk met bijna-identieke spelling",
-        };
-      }
-    }
-  }
-
-  // Live DNS check on generated variants (batched)
   const batchSize = 8;
-  for (let i = 0; i < ranked.length; i += batchSize) {
+  for (let i = 0; i < ranked.length && found.length < 6; i += batchSize) {
     const batch = ranked.slice(i, i + batchSize);
     const results = await Promise.all(
       batch.map(async (c) => ({
         ...c,
-        ok: await resolves(c.domain),
+        ok: !seen.has(c.domain) && (await resolves(c.domain)),
       })),
     );
-    const hit = results.find((r) => r.ok);
-    if (hit) {
-      return {
-        target: hit.domain,
+    for (const hit of results) {
+      if (!hit.ok) continue;
+      seen.add(hit.domain);
+      found.push({
+        domain: hit.domain,
         distance: hit.distance,
         reason:
           hit.distance === 1
             ? "actief domein op 1 typfout afstand"
             : "actief domein op 2 typfouten afstand",
-      };
+      });
     }
   }
 
-  return null;
+  return found;
 }
 
-export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
-  const known = detectKnownBrand(domain);
-  let target = known.hit;
-  let method = known.method;
-  let reason = "";
+type Authority = {
+  score: number;
+  redirectsTo: string | null;
+  resolves: boolean;
+  known: boolean;
+};
 
-  const typo = await findTyposquatTarget(domain);
-  if (typo) {
-    // Prefer live typosquat when found (more specific)
-    if (!target || typo.distance <= 2) {
-      target = typo.target;
-      method = "typosquat";
-      reason = typo.reason;
-    }
-  }
+async function assessAuthority(domain: string): Promise<Authority> {
+  const known = isKnownBrand(domain);
+  const dnsOk = await resolves(domain);
+  const dest = dnsOk ? await finalHost(domain) : null;
+  const redirectsTo =
+    dest && !hostsMatch(dest, domain) ? normalizeCanonical(dest) : null;
 
-  // Self-check: don't flag the real brand
-  if (target && target === domain) {
-    target = null;
-  }
+  let score = 0;
+  if (known) score += 100;
+  if (dnsOk) score += 20;
+  if (dest) score += 15;
+  // Being a redirect *destination* is stronger than being a redirect source —
+  // measured later via peer comparison.
+  if (redirectsTo) score -= 25;
+  // Slightly prefer longer labels when both are active (yourhosting > youhosting)
+  score += Math.min(splitDomain(domain).label.length, 24);
 
-  const inputResolves = await resolves(domain);
+  return { score, redirectsTo, resolves: dnsOk, known };
+}
 
-  if (target) {
-    const inactiveNote = inputResolves
-      ? ""
-      : " Het gecontroleerde domein lijkt daarnaast niet actief (geen DNS).";
-    const detail =
-      method === "typosquat"
-        ? `Waarschijnlijke typosquat van ${target} (${reason}).${inactiveNote}`
-        : `Lijkt sterk op ${target} (${method === "distance" ? "bijna-identieke spelling" : "merkfragment in de naam"}).${inactiveNote}`;
-
-    return [
-      {
-        key: "spoof",
-        label: "Merk-/overheidsnabootsing",
-        positive: false,
-        detail,
-        weight: 24,
-        group: "heuristiek",
-        delta: inputResolves ? -28 : -34,
-        raw: {
-          target,
-          method,
-          reason,
-          inputResolves,
-          distance:
-            typo && typo.target === target ? typo.distance : undefined,
-        },
-      },
-    ];
-  }
-
+function safeSignal(domain: string, detail: string, delta = 8): TrustSignal[] {
   return [
     {
       key: "spoof",
       label: "Merk-/overheidsnabootsing",
       positive: true,
-      detail:
-        "Geen actief lookalike-domein of bekende merknabootsing gevonden in de naam",
+      detail,
       weight: 20,
       group: "heuristiek",
-      delta: 3,
-      raw: { method: "none", inputResolves },
+      delta,
+      raw: { method: "canonical", domain },
+    },
+  ];
+}
+
+export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
+  const subject = domain.toLowerCase();
+
+  // Canonical known brand → never treat as typosquat of a shorter alias.
+  if (isKnownBrand(subject)) {
+    return safeSignal(
+      subject,
+      "Bekend legitiem merkdomein — geen nabootsing gedetecteerd",
+      10,
+    );
+  }
+
+  const subjectAuth = await assessAuthority(subject);
+  const lookalikes = await findLookalikes(subject);
+
+  if (lookalikes.length === 0) {
+    // Still check distance-to-known even if DNS on brand failed earlier
+    const close = findClosestKnownBrand(subject);
+    if (close && (await resolves(close.brand))) {
+      lookalikes.push({
+        domain: close.brand,
+        distance: close.distance,
+        reason: "bekend merk met bijna-identieke spelling",
+      });
+    }
+  }
+
+  if (lookalikes.length === 0) {
+    return [
+      {
+        key: "spoof",
+        label: "Merk-/overheidsnabootsing",
+        positive: true,
+        detail:
+          "Geen actief lookalike-domein of bekende merknabootsing gevonden in de naam",
+        weight: 20,
+        group: "heuristiek",
+        delta: 3,
+        raw: { method: "none", inputResolves: subjectAuth.resolves },
+      },
+    ];
+  }
+
+  // Assess peers and pick the most authoritative lookalike
+  const peers = await Promise.all(
+    lookalikes.map(async (l) => ({
+      ...l,
+      auth: await assessAuthority(l.domain),
+    })),
+  );
+
+  // Boost peer if subject redirects to them, or they are redirect target of subject
+  for (const peer of peers) {
+    if (
+      subjectAuth.redirectsTo &&
+      hostsMatch(subjectAuth.redirectsTo, peer.domain)
+    ) {
+      peer.auth.score += 40;
+    }
+    if (peer.auth.redirectsTo && hostsMatch(peer.auth.redirectsTo, subject)) {
+      // Peer is just an alias pointing at us → we are the original
+      subjectAuth.score += 50;
+      peer.auth.score -= 30;
+    }
+  }
+
+  peers.sort((a, b) => b.auth.score - a.auth.score);
+  const best = peers[0]!;
+
+  // Subject redirects to a stronger original → alias / secondary domain (not a scam clone)
+  // Check this BEFORE raw score compare, so typo domains that 301 to the brand
+  // are not treated as hostile typosquats.
+  if (
+    subjectAuth.redirectsTo &&
+    (hostsMatch(subjectAuth.redirectsTo, best.domain) ||
+      isKnownBrand(subjectAuth.redirectsTo))
+  ) {
+    const dest = isKnownBrand(subjectAuth.redirectsTo)
+      ? subjectAuth.redirectsTo
+      : best.domain;
+    return [
+      {
+        key: "spoof",
+        label: "Merk-/overheidsnabootsing",
+        positive: null,
+        detail: `Geen zelfstandige scam-site: dit domein verwijst door naar ${dest}. Niet het primaire merkdomein, wel gekoppeld aan het origineel.`,
+        weight: 18,
+        group: "heuristiek",
+        delta: -8,
+        raw: {
+          target: dest,
+          method: "redirect_alias",
+          inputResolves: subjectAuth.resolves,
+          distance: best.distance,
+          subjectScore: subjectAuth.score,
+          peerScore: best.auth.score,
+        },
+      },
+    ];
+  }
+
+  // Subject is more (or equally) authoritative → not a fake typosquat
+  if (subjectAuth.score >= best.auth.score) {
+    if (
+      best.auth.redirectsTo &&
+      hostsMatch(best.auth.redirectsTo, subject)
+    ) {
+      return safeSignal(
+        subject,
+        `Actief lookalike ${best.domain} verwijst terug naar dit domein — dit lijkt het origineel`,
+        8,
+      );
+    }
+    return safeSignal(
+      subject,
+      "Geen sterkere lookalike gevonden; dit domein lijkt geen nabootsing",
+      5,
+    );
+  }
+
+  // True typosquat / impersonation risk
+  const inactiveNote = subjectAuth.resolves
+    ? ""
+    : " Het gecontroleerde domein lijkt daarnaast niet actief (geen DNS).";
+
+  return [
+    {
+      key: "spoof",
+      label: "Merk-/overheidsnabootsing",
+      positive: false,
+      detail: `Waarschijnlijke typosquat van ${best.domain} (${best.reason}).${inactiveNote}`,
+      weight: 24,
+      group: "heuristiek",
+      delta: subjectAuth.resolves ? -28 : -34,
+      raw: {
+        target: best.domain,
+        method: "typosquat",
+        reason: best.reason,
+        inputResolves: subjectAuth.resolves,
+        distance: best.distance,
+        subjectScore: subjectAuth.score,
+        peerScore: best.auth.score,
+      },
     },
   ];
 }

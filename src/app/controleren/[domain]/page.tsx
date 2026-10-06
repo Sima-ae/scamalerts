@@ -17,6 +17,10 @@ function riskHighlights(signals: TrustSignal[]) {
   return signals.filter((s) => s.positive === false);
 }
 
+function noticeHighlights(signals: TrustSignal[]) {
+  return signals.filter((s) => s.positive === null && s.key === "spoof");
+}
+
 export default async function DomainResultPage({
   params,
   searchParams,
@@ -95,6 +99,7 @@ export default async function DomainResultPage({
 
   const groups = groupSignals(analysis.signals);
   const risks = riskHighlights(analysis.signals);
+  const notices = noticeHighlights(analysis.signals);
   const spoof = analysis.signals.find((s) => s.key === "spoof");
   const spoofTarget =
     spoof?.raw && typeof spoof.raw.target === "string"
@@ -163,7 +168,7 @@ export default async function DomainResultPage({
           {risks.length > 0 && (
             <div className="mt-8 border border-danger/25 bg-[color-mix(in_oklab,var(--danger)_6%,white)] px-5 py-5">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-danger">
-                Belangrijkste bevindingen
+                Belangrijkste risico’s
               </p>
               <ul className="mt-3 space-y-2.5">
                 {risks.map((r) => (
@@ -172,9 +177,35 @@ export default async function DomainResultPage({
                   </li>
                 ))}
               </ul>
-              {spoofTarget && (
+              {spoofTarget && spoof?.positive === false && (
                 <p className="mt-4 text-sm text-ink">
                   Vergelijk met het waarschijnlijke origineel:{" "}
+                  <Link
+                    href={`/controleren/${encodeURIComponent(spoofTarget)}`}
+                    className="font-semibold text-accent hover:underline"
+                  >
+                    {spoofTarget}
+                  </Link>
+                </p>
+              )}
+            </div>
+          )}
+
+          {notices.length > 0 && (
+            <div className="mt-6 border border-amber-300/60 bg-amber-50 px-5 py-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">
+                Context
+              </p>
+              <ul className="mt-3 space-y-2.5">
+                {notices.map((n) => (
+                  <li key={n.key} className="text-sm leading-relaxed text-ink">
+                    <span className="font-semibold">{n.label}:</span> {n.detail}
+                  </li>
+                ))}
+              </ul>
+              {spoofTarget && (
+                <p className="mt-4 text-sm text-ink">
+                  Primair merkdomein:{" "}
                   <Link
                     href={`/controleren/${encodeURIComponent(spoofTarget)}`}
                     className="font-semibold text-accent hover:underline"
