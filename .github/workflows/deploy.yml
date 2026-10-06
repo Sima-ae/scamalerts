@@ -1,0 +1,66 @@
+# Deploy all-scams.com to VPS on push to main.
+#
+# Secrets: VPS_HOST, VPS_USER, VPS_SSH_KEY, VPS_APP_PATH (optional)
+
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-all-scams
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Deploy over SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_PATH: ${{ secrets.VPS_APP_PATH }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [[ -z "${VPS_HOST// }" ]] && missing+=("VPS_HOST")
+          [[ -z "${VPS_USER// }" ]] && missing+=("VPS_USER")
+          [[ -z "${SSH_KEY// }" ]] && missing+=("VPS_SSH_KEY")
+          if ((${#missing[@]})); then
+            echo "ERROR: Missing secrets: ${missing[*]}"
+            exit 1
+          fi
+
+          install -m 700 -d ~/.ssh
+          KEY_FILE=~/.ssh/id_deploy
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+
+          SSH_OPTS=(-T -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o IdentitiesOnly=yes -i "$KEY_FILE")
+          APP_DIR="${VPS_APP_PATH:-/home/all-scams.com/app}"
+
+          ssh "${SSH_OPTS[@]}" "${VPS_USER}@${VPS_HOST}" bash -s <<EOF
+          set -euo pipefail
+          APP_DIR="${APP_DIR}"
+          cd "\$APP_DIR"
+          bash scripts/ensure-free-port.sh 3010 all-scams
+          git fetch origin main
+          git reset --hard origin/main
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+          npm run build
+          mkdir -p .next/standalone/.next
+          cp -a .next/static .next/standalone/.next/static
+          cp -a public .next/standalone/public 2>/dev/null || true
+          cp -a .env .next/standalone/.env 2>/dev/null || true
+          pm2 startOrReload ecosystem.config.cjs --update-env
+          pm2 save
+          sleep 2
+          curl -fsS -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3010/ || true
+          echo "Deployed all-scams.com on port 3010"
+          EOF

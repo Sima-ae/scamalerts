@@ -1,0 +1,17 @@
+# LiteSpeed / CyberPanel reverse proxy snippet for all-scams.com → 127.0.0.1:3010
+# Apply via CyberPanel "Create Reverse Proxy" or vhost context.
+
+# Context URI: /
+# Proxy Address: http://127.0.0.1:3010
+# WebSocket: enabled if available
+
+# Or OpenLiteSpeed extprocessor style:
+# extprocessor allscams {
+#   type                    proxy
+#   address                 127.0.0.1:3010
+#   maxConns                100
+#   pcKeepAliveTimeout      60
+#   initTimeout             60
+#   retryTimeout            0
+#   respBuffer              0
+# }

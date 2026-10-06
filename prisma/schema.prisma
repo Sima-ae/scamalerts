@@ -1,0 +1,304 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  BUSINESS
+  EDITOR
+  ADMIN
+}
+
+enum ReportStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  HIDDEN
+}
+
+enum TrustLabel {
+  VERY_LIKELY_UNSAFE
+  HIGH_RISK
+  POTENTIALLY_UNSAFE
+  NEUTRAL
+  LIKELY_SAFE
+  VERY_LIKELY_SAFE
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AccreditationStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  reports       ScamReport[] @relation("ReportAuthor")
+  reviews       Review[]
+  moderated     ModerationAction[] @relation("Moderator")
+  articles      Article[]
+  businessClaims BusinessClaim[]
+  accreditationApps AccreditationApplication[]
+  apiKeys       ApiKey[]
+  auditLogs     AuditLog[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  reports  ScamReport[]
+  articles Article[]
+}
+
+model DomainProfile {
+  id             String     @id @default(cuid())
+  domain         String     @unique
+  trustScore     Int        @default(50)
+  trustLabel     TrustLabel @default(NEUTRAL)
+  signals        Json?
+  viewCount      Int        @default(0)
+  firstAnalyzed  DateTime   @default(now())
+  lastUpdated    DateTime   @updatedAt
+  verified       Boolean    @default(false)
+  claimed        Boolean    @default(false)
+
+  reports        ScamReport[]
+  reviews        Review[]
+  claims         BusinessClaim[]
+  accreditation  AccreditationApplication[]
+}
+
+model ScamReport {
+  id             String       @id @default(cuid())
+  title          String
+  description    String       @db.Text
+  channel        String?
+  amountLost     Decimal?     @db.Decimal(12, 2)
+  currency       String?      @default("EUR")
+  reporterName   String?
+  reporterEmail  String?
+  status         ReportStatus @default(PENDING)
+  identifierType String?
+  identifierValue String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  publishedAt    DateTime?
+
+  authorId   String?
+  author     User?          @relation("ReportAuthor", fields: [authorId], references: [id])
+  domainId   String?
+  domain     DomainProfile? @relation(fields: [domainId], references: [id])
+  categoryId String?
+  category   Category?      @relation(fields: [categoryId], references: [id])
+
+  evidence   EvidenceFile[]
+  moderation ModerationAction[]
+
+  @@index([status, createdAt])
+  @@index([domainId])
+  @@index([categoryId])
+}
+
+model Review {
+  id        String       @id @default(cuid())
+  rating    Int
+  title     String?
+  body      String       @db.Text
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  authorId String
+  author   User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  domainId String
+  domain   DomainProfile @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@index([domainId, status])
+}
+
+model EvidenceFile {
+  id           String   @id @default(cuid())
+  filename     String
+  storagePath  String
+  mimeType     String
+  sizeBytes    Int
+  createdAt    DateTime @default(now())
+
+  reportId String
+  report   ScamReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+model ModerationAction {
+  id        String   @id @default(cuid())
+  action    String
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+
+  moderatorId String
+  moderator   User       @relation("Moderator", fields: [moderatorId], references: [id])
+  reportId    String?
+  report      ScamReport? @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+model Article {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  excerpt     String?       @db.Text
+  content     String        @db.LongText
+  coverImage  String?
+  status      ArticleStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  authorId   String?
+  author     User?     @relation(fields: [authorId], references: [id])
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  @@index([status, publishedAt])
+}
+
+model BusinessClaim {
+  id          String      @id @default(cuid())
+  companyName String
+  contactEmail String
+  evidenceUrl String?
+  status      ClaimStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  userId   String
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domainId String
+  domain   DomainProfile @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([domainId])
+}
+
+model AccreditationApplication {
+  id        String              @id @default(cuid())
+  status    AccreditationStatus @default(DRAFT)
+  notes     String?             @db.Text
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  userId   String
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domainId String
+  domain   DomainProfile @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  keyHash    String    @unique
+  keyPrefix  String
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String?
+  entityId   String?
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  actorId String?
+  actor   User?  @relation(fields: [actorId], references: [id])
+
+  @@index([createdAt])
+}
+
+model SiteSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+}
