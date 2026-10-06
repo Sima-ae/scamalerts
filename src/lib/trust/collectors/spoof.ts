@@ -19,12 +19,18 @@ const KNOWN_BRANDS = [
   { brand: "paypal.com", needles: ["paypal-", "pay-pal"] },
   { brand: "microsoft.com", needles: ["microsoft-", "office365-", "m365-"] },
   { brand: "apple.com", needles: ["apple-", "icloud-"] },
+  { brand: "apple.nl", needles: ["apple-"] },
   { brand: "kvk.nl", needles: ["kvk-", "kamer-van-koophandel"] },
   { brand: "tikkie.me", needles: ["tikkie-", "tikkie."] },
   { brand: "digid.nl", needles: ["digid-", "digi-d"] },
   { brand: "marktplaats.nl", needles: ["marktplaats-", "markt-plaats"] },
   { brand: "postnl.nl", needles: ["postnl-", "post-nl"] },
   { brand: "bol.com", needles: ["bolcom-", "bol-com"] },
+  { brand: "amazon.com", needles: ["amazon-", "amzn-"] },
+  { brand: "google.com", needles: ["google-", "gmail-"] },
+  { brand: "facebook.com", needles: ["facebook-", "meta-login"] },
+  { brand: "instagram.com", needles: ["instagram-", "insta-"] },
+  { brand: "netflix.com", needles: ["netflix-"] },
   { brand: "yourhosting.nl", needles: ["yourhosting", "your-hosting"] },
   { brand: "transip.nl", needles: ["transip", "trans-ip"] },
   { brand: "hostnet.nl", needles: ["hostnet"] },
@@ -36,12 +42,30 @@ const KNOWN_BRANDS = [
 ];
 
 const KNOWN_SET = new Set(KNOWN_BRANDS.map((b) => b.brand));
+const FAMOUS_LABELS = new Set(
+  KNOWN_BRANDS.map((b) => splitDomain(b.brand).label).filter((l) => l.length >= 4),
+);
 
 function normalizeCanonical(host: string): string {
-  // Collapse www. and match known brand apex when possible
   const bare = host.toLowerCase().replace(/^www\./, "");
   if (KNOWN_SET.has(bare)) return bare;
   return bare;
+}
+
+function isFamousLabel(label: string): boolean {
+  return FAMOUS_LABELS.has(label.toLowerCase());
+}
+
+function closestFamousLabel(label: string): { label: string; distance: number } | null {
+  let best: { label: string; distance: number } | null = null;
+  for (const famous of FAMOUS_LABELS) {
+    const distance = levenshtein(label, famous);
+    if (distance < 1 || distance > 2) continue;
+    if (!best || distance < best.distance) {
+      best = { label: famous, distance };
+    }
+  }
+  return best;
 }
 
 async function resolves(domain: string): Promise<boolean> {
@@ -66,28 +90,11 @@ function isKnownBrand(domain: string): boolean {
   return KNOWN_SET.has(domain.toLowerCase());
 }
 
-function findClosestKnownBrand(domain: string): {
-  brand: string;
-  distance: number;
-} | null {
-  const { label, tld } = splitDomain(domain);
-  let best: { brand: string; distance: number } | null = null;
-  for (const entry of KNOWN_BRANDS) {
-    const b = splitDomain(entry.brand);
-    if (b.tld !== tld) continue;
-    const distance = levenshtein(label, b.label);
-    if (distance < 1 || distance > 2) continue;
-    if (!best || distance < best.distance) {
-      best = { brand: entry.brand, distance };
-    }
-  }
-  return best;
-}
-
 type Lookalike = {
   domain: string;
   distance: number;
   reason: string;
+  famous: boolean;
 };
 
 async function findLookalikes(domain: string): Promise<Lookalike[]> {
@@ -97,22 +104,52 @@ async function findLookalikes(domain: string): Promise<Lookalike[]> {
   const found: Lookalike[] = [];
   const seen = new Set<string>();
 
-  // Known brands at edit distance 1–2
+  const push = (item: Lookalike) => {
+    if (seen.has(item.domain)) return;
+    seen.add(item.domain);
+    found.push(item);
+  };
+
+  // Famous brand labels (cross-TLD): applee.nl → apple.nl / apple.com
+  const famous = closestFamousLabel(label);
+  if (famous) {
+    const sameTld = `${famous.label}.${tld}`;
+    if (await resolves(sameTld)) {
+      push({
+        domain: sameTld,
+        distance: famous.distance,
+        reason: `lijkt op bekend merk “${famous.label}”`,
+        famous: true,
+      });
+    }
+    for (const entry of KNOWN_BRANDS) {
+      const b = splitDomain(entry.brand);
+      if (b.label !== famous.label) continue;
+      if (!(await resolves(entry.brand))) continue;
+      push({
+        domain: entry.brand,
+        distance: famous.distance,
+        reason: `lijkt op bekend merk ${entry.brand}`,
+        famous: true,
+      });
+    }
+  }
+
+  // Exact known brand domains at edit distance 1–2 (any TLD)
   for (const entry of KNOWN_BRANDS) {
     const b = splitDomain(entry.brand);
-    if (b.tld !== tld) continue;
     const distance = levenshtein(label, b.label);
     if (distance < 1 || distance > 2) continue;
-    if (seen.has(entry.brand)) continue;
     if (!(await resolves(entry.brand))) continue;
-    seen.add(entry.brand);
-    found.push({
+    push({
       domain: entry.brand,
       distance,
       reason: "bekend merk met bijna-identieke spelling",
+      famous: true,
     });
   }
 
+  // Live DNS on generated typo variants (same TLD)
   const ranked = generateTypoLabels(label)
     .map((c) => ({
       label: c,
@@ -123,7 +160,7 @@ async function findLookalikes(domain: string): Promise<Lookalike[]> {
     .sort((a, b) => a.distance - b.distance);
 
   const batchSize = 8;
-  for (let i = 0; i < ranked.length && found.length < 6; i += batchSize) {
+  for (let i = 0; i < ranked.length && found.length < 8; i += batchSize) {
     const batch = ranked.slice(i, i + batchSize);
     const results = await Promise.all(
       batch.map(async (c) => ({
@@ -133,14 +170,14 @@ async function findLookalikes(domain: string): Promise<Lookalike[]> {
     );
     for (const hit of results) {
       if (!hit.ok) continue;
-      seen.add(hit.domain);
-      found.push({
+      push({
         domain: hit.domain,
         distance: hit.distance,
         reason:
           hit.distance === 1
             ? "actief domein op 1 typfout afstand"
             : "actief domein op 2 typfouten afstand",
+        famous: isFamousLabel(hit.label),
       });
     }
   }
@@ -153,10 +190,13 @@ type Authority = {
   redirectsTo: string | null;
   resolves: boolean;
   known: boolean;
+  famousLabel: boolean;
 };
 
 async function assessAuthority(domain: string): Promise<Authority> {
+  const { label } = splitDomain(domain);
   const known = isKnownBrand(domain);
+  const famousLabel = isFamousLabel(label);
   const dnsOk = await resolves(domain);
   const dest = dnsOk ? await finalHost(domain) : null;
   const redirectsTo =
@@ -164,15 +204,12 @@ async function assessAuthority(domain: string): Promise<Authority> {
 
   let score = 0;
   if (known) score += 100;
+  if (famousLabel) score += 90;
   if (dnsOk) score += 20;
-  if (dest) score += 15;
-  // Being a redirect *destination* is stronger than being a redirect source —
-  // measured later via peer comparison.
+  if (dest) score += 10;
   if (redirectsTo) score -= 25;
-  // Slightly prefer longer labels when both are active (yourhosting > youhosting)
-  score += Math.min(splitDomain(domain).label.length, 24);
 
-  return { score, redirectsTo, resolves: dnsOk, known };
+  return { score, redirectsTo, resolves: dnsOk, known, famousLabel };
 }
 
 function safeSignal(domain: string, detail: string, delta = 8): TrustSignal[] {
@@ -192,8 +229,8 @@ function safeSignal(domain: string, detail: string, delta = 8): TrustSignal[] {
 
 export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
   const subject = domain.toLowerCase();
+  const subjectLabel = splitDomain(subject).label;
 
-  // Canonical known brand → never treat as typosquat of a shorter alias.
   if (isKnownBrand(subject)) {
     return safeSignal(
       subject,
@@ -202,20 +239,17 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
     );
   }
 
+  // Exact famous label on this host (apple.nl) counts as canonical for that brand.
+  if (isFamousLabel(subjectLabel) && (await resolves(subject))) {
+    return safeSignal(
+      subject,
+      "Domeinnaam komt overeen met een bekend merk — geen typosquat van een sterker origineel",
+      8,
+    );
+  }
+
   const subjectAuth = await assessAuthority(subject);
   const lookalikes = await findLookalikes(subject);
-
-  if (lookalikes.length === 0) {
-    // Still check distance-to-known even if DNS on brand failed earlier
-    const close = findClosestKnownBrand(subject);
-    if (close && (await resolves(close.brand))) {
-      lookalikes.push({
-        domain: close.brand,
-        distance: close.distance,
-        reason: "bekend merk met bijna-identieke spelling",
-      });
-    }
-  }
 
   if (lookalikes.length === 0) {
     return [
@@ -233,7 +267,6 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
     ];
   }
 
-  // Assess peers and pick the most authoritative lookalike
   const peers = await Promise.all(
     lookalikes.map(async (l) => ({
       ...l,
@@ -241,7 +274,6 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
     })),
   );
 
-  // Boost peer if subject redirects to them, or they are redirect target of subject
   for (const peer of peers) {
     if (
       subjectAuth.redirectsTo &&
@@ -250,22 +282,25 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
       peer.auth.score += 40;
     }
     if (peer.auth.redirectsTo && hostsMatch(peer.auth.redirectsTo, subject)) {
-      // Peer is just an alias pointing at us → we are the original
       subjectAuth.score += 50;
       peer.auth.score -= 30;
+    }
+    // Famous brand always outranks a lookalike that is not famous.
+    if (peer.famous || peer.auth.famousLabel || peer.auth.known) {
+      if (!subjectAuth.famousLabel && !subjectAuth.known) {
+        peer.auth.score += 80;
+      }
     }
   }
 
   peers.sort((a, b) => b.auth.score - a.auth.score);
   const best = peers[0]!;
 
-  // Subject redirects to a stronger original → alias / secondary domain (not a scam clone)
-  // Check this BEFORE raw score compare, so typo domains that 301 to the brand
-  // are not treated as hostile typosquats.
   if (
     subjectAuth.redirectsTo &&
     (hostsMatch(subjectAuth.redirectsTo, best.domain) ||
-      isKnownBrand(subjectAuth.redirectsTo))
+      isKnownBrand(subjectAuth.redirectsTo) ||
+      isFamousLabel(splitDomain(subjectAuth.redirectsTo).label))
   ) {
     const dest = isKnownBrand(subjectAuth.redirectsTo)
       ? subjectAuth.redirectsTo
@@ -275,10 +310,10 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
         key: "spoof",
         label: "Merk-/overheidsnabootsing",
         positive: null,
-        detail: `Geen zelfstandige scam-site: dit domein verwijst door naar ${dest}. Niet het primaire merkdomein, wel gekoppeld aan het origineel.`,
+        detail: `Geen zelfstandige scam-site: dit domein verwijst door naar ${dest}. Score blijft voorzichtig-neutraal — controleer altijd of je op het echte merkdomein uitkomt.`,
         weight: 18,
         group: "heuristiek",
-        delta: -8,
+        delta: 38,
         raw: {
           target: dest,
           method: "redirect_alias",
@@ -291,8 +326,18 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
     ];
   }
 
-  // Subject is more (or equally) authoritative → not a fake typosquat
-  if (subjectAuth.score >= best.auth.score) {
+  const peerIsFamousBrand =
+    best.famous || best.auth.famousLabel || best.auth.known;
+  const subjectIsFamous = subjectAuth.famousLabel || subjectAuth.known;
+
+  // Impersonating a famous brand beats local authority heuristics
+  // (e.g. applee.nl must not outrank apple.nl / apple.com).
+  const forceTyposquat =
+    peerIsFamousBrand &&
+    !subjectIsFamous &&
+    best.distance <= 2;
+
+  if (!forceTyposquat && subjectAuth.score >= best.auth.score) {
     if (
       best.auth.redirectsTo &&
       hostsMatch(best.auth.redirectsTo, subject)
@@ -310,10 +355,17 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
     );
   }
 
-  // True typosquat / impersonation risk
   const inactiveNote = subjectAuth.resolves
     ? ""
     : " Het gecontroleerde domein lijkt daarnaast niet actief (geen DNS).";
+
+  // Famous-brand lookalikes (applee → apple) need a hard score hit even if
+  // DNS/TLS/age otherwise look “healthy”.
+  let delta = -28;
+  if (!subjectAuth.resolves) delta = -34;
+  if (forceTyposquat || peerIsFamousBrand) {
+    delta = subjectAuth.resolves ? -55 : -60;
+  }
 
   return [
     {
@@ -323,7 +375,7 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
       detail: `Waarschijnlijke typosquat van ${best.domain} (${best.reason}).${inactiveNote}`,
       weight: 24,
       group: "heuristiek",
-      delta: subjectAuth.resolves ? -28 : -34,
+      delta,
       raw: {
         target: best.domain,
         method: "typosquat",
@@ -332,6 +384,7 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
         distance: best.distance,
         subjectScore: subjectAuth.score,
         peerScore: best.auth.score,
+        forceTyposquat,
       },
     },
   ];

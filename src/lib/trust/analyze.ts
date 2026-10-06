@@ -134,8 +134,24 @@ export async function analyzeDomain(
     }
   }
 
-  const score = computeScore(signals);
-  const label = scoreToLabel(score);
+  let score = computeScore(signals);
+  let label = scoreToLabel(score);
+
+  // Redirect aliases of a real brand: high confidence it's not a scam clone,
+  // but keep the public label Neutral so users stay careful about spoofing.
+  const isRedirectAlias = signals.some(
+    (s) =>
+      s.key === "spoof" &&
+      s.raw &&
+      typeof s.raw === "object" &&
+      (s.raw as { method?: string }).method === "redirect_alias",
+  );
+  if (isRedirectAlias) {
+    score = Math.max(score, 88);
+    score = Math.min(score, 92);
+    label = "NEUTRAL";
+  }
+
   const payload: SignalsPayload = {
     version: TRUST_SIGNALS_VERSION,
     collectedAt,
