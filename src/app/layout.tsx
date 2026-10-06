@@ -1,21 +1,15 @@
 import type { Metadata } from "next";
-import { Fraunces, Source_Sans_3 } from "next/font/google";
+import "@fontsource/fraunces/500.css";
+import "@fontsource/fraunces/600.css";
+import "@fontsource/fraunces/700.css";
+import "@fontsource/source-sans-3/400.css";
+import "@fontsource/source-sans-3/500.css";
+import "@fontsource/source-sans-3/600.css";
+import "@fontsource/source-sans-3/700.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Providers } from "@/components/providers";
 import "./globals.css";
-
-const display = Fraunces({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
-
-const body = Source_Sans_3({
-  variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -43,11 +37,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="nl"
-      className={`${display.variable} ${body.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col bg-background text-foreground">
+    <html lang="nl" className="h-full antialiased">
+      <body className="flex min-h-full flex-col bg-background text-foreground font-sans">
         <Providers>
           <SiteHeader />
           <main className="flex-1">{children}</main>

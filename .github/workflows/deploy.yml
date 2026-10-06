@@ -51,7 +51,8 @@ jobs:
           bash scripts/ensure-free-port.sh 3010 all-scams
           git fetch origin main
           git reset --hard origin/main
-          rm -rf node_modules .next
+          # Keep previous .next until new build succeeds
+          rm -rf node_modules
           npm ci
           npx prisma generate
           npx prisma migrate deploy
@@ -60,7 +61,6 @@ jobs:
           cp -a .next/static .next/standalone/.next/static
           cp -a public .next/standalone/public 2>/dev/null || true
           cp -a .env .next/standalone/.env 2>/dev/null || true
-          # Keep previous build if healthcheck fails
           pm2 startOrReload ecosystem.config.cjs --update-env
           pm2 save
           sleep 3
