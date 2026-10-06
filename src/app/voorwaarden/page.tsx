@@ -1,20 +1,28 @@
+import { BRAND_NAME, BRAND_DOMAIN } from "@/lib/brand";
+
 export const metadata = { title: "Voorwaarden" };
 
 export default function VoorwaardenPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-14 md:px-6">
-      <h1 className="font-[family-name:var(--font-display)] text-4xl text-white">
-        Gebruiksvoorwaarden
-      </h1>
-      <div className="mt-6 space-y-4 text-slate-300 leading-relaxed">
+    <div className="section-shell prose-page py-14 md:py-16">
+      <h1 className="font-display text-4xl text-ink">Gebruiksvoorwaarden</h1>
+      <div className="mt-6 space-y-4 leading-relaxed text-muted">
         <p>
-          Door all-scams.com te gebruiken accepteer je dat Trust Scores en
-          content informatief zijn en geen juridisch advies vormen.
+          Door {BRAND_DOMAIN} te gebruiken accepteer je dat Trust Scores,
+          artikelen en meldingen informatief zijn. Ze vormen geen juridisch
+          advies, geen garantie en geen officiële beoordeling door overheid of
+          toezichthouder.
         </p>
         <p>
-          Het is niet toegestaan om lasterlijke, onware of kwaadwillige meldingen
-          te plaatsen. Wij behouden het recht content te weigeren, te verwijderen
-          of accounts te blokkeren.
+          Het is niet toegestaan om lasterlijke, aantoonbaar onware of
+          kwaadwillige meldingen te plaatsen, of het platform te gebruiken voor
+          spam, scraping of het omzeilen van beveiliging. Wij mogen content
+          weigeren, verwijderen of accounts blokkeren.
+        </p>
+        <p>
+          Je blijft zelf verantwoordelijk voor beslissingen die je neemt op basis
+          van informatie op {BRAND_NAME}. Bij twijfel: stop de betaling, verifieer
+          via officiële kanalen en schakel Fraudehelpdesk of politie in.
         </p>
       </div>
     </div>

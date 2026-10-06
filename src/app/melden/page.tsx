@@ -5,6 +5,8 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Scam melden",
+  description:
+    "Meld een scam bij All Scams. Je rapport helpt anderen en wordt eerst gemodereerd voordat het openbaar is.",
 };
 
 export default async function MeldenPage({
@@ -18,13 +20,14 @@ export default async function MeldenPage({
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
-      <h1 className="font-[family-name:var(--font-display)] text-4xl text-white md:text-5xl">
+    <div className="section-shell py-14 md:py-16">
+      <h1 className="font-display text-4xl text-ink md:text-5xl">
         Meld een scam
       </h1>
-      <p className="mt-4 max-w-2xl text-slate-300">
-        Je melding helpt anderen. Geen account nodig — wel moderatie voordat
-        content openbaar wordt. Voeg zoveel feiten toe als je veilig kunt delen.
+      <p className="mt-4 max-w-2xl text-muted">
+        Deel wat je hebt meegemaakt zodat anderen eerder doorhebben wat er
+        speelt. Een account is niet verplicht; wel moderatie voordat iets
+        openbaar wordt. Beschrijf feiten die je veilig kunt delen.
       </p>
       <div className="mt-10">
         <ReportForm

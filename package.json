@@ -1,5 +1,5 @@
 {
-  "name": "scamalerts",
+  "name": "all-scams",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,6 +10,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "db:tunnel": "ssh -i ~/.ssh/auto_leads_deploy -o IdentitiesOnly=yes -o ExitOnForwardFailure=yes -N -L 3307:127.0.0.1:3306 root@89.116.38.197",
     "postinstall": "npx prisma generate"
   },
   "prisma": {
@@ -38,6 +39,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/turbopack": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
@@ -47,6 +49,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
+    "postcss": "^8.5.29",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",

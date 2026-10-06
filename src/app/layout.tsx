@@ -9,25 +9,31 @@ import "@fontsource/source-sans-3/700.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Providers } from "@/components/providers";
+import { BRAND_NAME, BRAND_URL } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "https://all-scams.com",
-  ),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? BRAND_URL),
   title: {
-    default: "Scam Alerts — Controleer websites & meld scams | all-scams.com",
-    template: "%s | Scam Alerts",
+    default: `${BRAND_NAME} — Website controleren & scams melden`,
+    template: `%s | ${BRAND_NAME}`,
   },
   description:
-    "Controleer of een website veilig is, bekijk actuele scam-meldingen in Nederland en meld fraude. Trust Score, kennisbank en hulp bij herstel.",
+    "All Scams helpt je websites te checken, verdachte praktijken te melden en Nederlandse scam-trucs te begrijpen. Duidelijke Trust Score, actuele meldingen en praktische gidsen.",
   openGraph: {
-    title: "Scam Alerts | all-scams.com",
+    title: `${BRAND_NAME} — controleer websites en meld fraude`,
     description:
-      "Het Nederlandse platform voor websitecontrole, scam-meldingen en fraudepreventie.",
+      "Nederlandstalig platform voor websitecontrole, scam-meldingen en fraudepreventie.",
     locale: "nl_NL",
     type: "website",
-    url: "https://all-scams.com",
+    url: BRAND_URL,
+    siteName: BRAND_NAME,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: BRAND_NAME,
+    description:
+      "Controleer een website, bekijk meldingen en leer scams herkennen.",
   },
 };
 
@@ -38,7 +44,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="nl" className="h-full antialiased">
-      <body className="flex min-h-full flex-col bg-background text-foreground font-sans">
+      <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
         <Providers>
           <SiteHeader />
           <main className="flex-1">{children}</main>

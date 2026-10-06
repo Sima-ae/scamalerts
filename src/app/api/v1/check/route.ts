@@ -20,38 +20,38 @@ async function authorize(req: Request) {
 export async function GET(req: Request) {
   const auth = await authorize(req);
   if (!auth) {
-    return NextResponse.json({ error: "Ongeldige of ontbrekende API-key." }, { status: 401 });
+    return NextResponse.json(
+      { error: "Ongeldige of ontbrekende API-key." },
+      { status: 401 },
+    );
   }
 
   const { searchParams } = new URL(req.url);
   const domainParam = searchParams.get("domain");
   if (!domainParam) {
-    return NextResponse.json({ error: "Parameter domain is verplicht." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Parameter domain is verplicht." },
+      { status: 400 },
+    );
   }
 
-  const analysis = await analyzeDomain(domainParam);
+  const refresh = searchParams.get("refresh") === "1";
+  const analysis = await analyzeDomain(domainParam, { refresh });
   const domain = normalizeDomain(domainParam);
-  const profile = await prisma.domainProfile.upsert({
+
+  const profile = await prisma.domainProfile.findUnique({
     where: { domain },
-    update: {
-      trustScore: analysis.score,
-      trustLabel: analysis.label,
-      signals: analysis.signals,
-    },
-    create: {
-      domain,
-      trustScore: analysis.score,
-      trustLabel: analysis.label,
-      signals: analysis.signals,
-    },
   });
 
   return NextResponse.json({
-    domain: profile.domain,
-    score: profile.trustScore,
-    label: profile.trustLabel,
-    label_nl: trustLabelNL(profile.trustLabel),
+    domain: analysis.domain,
+    score: analysis.score,
+    label: analysis.label,
+    label_nl: trustLabelNL(analysis.label),
     signals: analysis.signals,
-    updated_at: profile.lastUpdated,
+    cached: analysis.cached,
+    collected_at: analysis.collectedAt,
+    version: analysis.version,
+    updated_at: profile?.lastUpdated ?? analysis.collectedAt,
   });
 }

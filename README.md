@@ -1,11 +1,11 @@
-# Scam Alerts — all-scams.com
+# All Scams — all-scams.com
 
 Nederlandstalig platform om websites te controleren, scams te melden en kennis te delen.
 
 ## Stack
 
-- Next.js (App Router) + TypeScript + Tailwind
-- Prisma + MariaDB (`alls_cams_com`)
+- Next.js (App Router) + TypeScript + Tailwind CSS v4
+- Prisma + MariaDB
 - Auth.js (credentials)
 - PM2 op poort **3010** achter LiteSpeed op `all-scams.com`
 
@@ -26,7 +26,7 @@ npm run dev            # http://localhost:3010
 
 - App: `/home/all-scams.com/app`
 - PM2 name: `all-scams`
-- Poort: `3010` (free-port check in `scripts/ensure-free-port.sh`)
+- Poort: `3010`
 - Domain: `https://all-scams.com`
 - Deploy: push naar `main` → GitHub Actions SSH deploy
 

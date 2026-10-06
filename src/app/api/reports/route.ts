@@ -27,23 +27,15 @@ export async function POST(req: Request) {
     let identifierValue: string | undefined;
 
     if (data.domain?.trim()) {
-      const analysis = await analyzeDomain(data.domain);
       const domain = normalizeDomain(data.domain);
-      const profile = await prisma.domainProfile.upsert({
+      // Reuse cached analysis (24h) — analyzeDomain persists DomainProfile.
+      await analyzeDomain(domain);
+      const profile = await prisma.domainProfile.findUnique({
         where: { domain },
-        update: {
-          trustScore: analysis.score,
-          trustLabel: analysis.label,
-          signals: analysis.signals,
-        },
-        create: {
-          domain,
-          trustScore: analysis.score,
-          trustLabel: analysis.label,
-          signals: analysis.signals,
-        },
       });
-      domainId = profile.id;
+      if (profile) {
+        domainId = profile.id;
+      }
       identifierType = "domain";
       identifierValue = domain;
     }

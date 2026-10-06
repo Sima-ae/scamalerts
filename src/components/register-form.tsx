@@ -43,37 +43,33 @@ export function RegisterForm() {
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-md space-y-4">
       <div>
-        <label className="text-sm text-slate-300">Naam</label>
-        <input
-          name="name"
-          required
-          className="mt-1 w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-white"
-        />
+        <label className="text-sm font-medium text-ink">Naam</label>
+        <input name="name" required className="input-field mt-1" />
       </div>
       <div>
-        <label className="text-sm text-slate-300">E-mail</label>
+        <label className="text-sm font-medium text-ink">E-mail</label>
         <input
           name="email"
           type="email"
           required
-          className="mt-1 w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-white"
+          className="input-field mt-1"
         />
       </div>
       <div>
-        <label className="text-sm text-slate-300">Wachtwoord</label>
+        <label className="text-sm font-medium text-ink">Wachtwoord</label>
         <input
           name="password"
           type="password"
           required
           minLength={8}
-          className="mt-1 w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-white"
+          className="input-field mt-1"
         />
       </div>
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-md bg-teal-400 py-2.5 font-semibold text-[#062018] hover:bg-teal-300"
+        className="btn-ink w-full disabled:opacity-60"
       >
         {loading ? "Bezig…" : "Account aanmaken"}
       </button>

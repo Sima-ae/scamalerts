@@ -1,8 +1,27 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatDateNL } from "@/lib/utils";
+import type { Metadata } from "next";
+import { BRAND_NAME } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const article = await prisma.article.findUnique({ where: { slug } });
+  if (!article || article.status !== "PUBLISHED") {
+    return { title: "Artikel" };
+  }
+  return {
+    title: article.title,
+    description: article.excerpt ?? `${article.title} — ${BRAND_NAME}`,
+  };
+}
 
 export default async function ArticlePage({
   params,
@@ -17,19 +36,24 @@ export default async function ArticlePage({
   if (!article || article.status !== "PUBLISHED") notFound();
 
   return (
-    <article className="mx-auto max-w-3xl px-4 py-14 md:px-6">
-      <p className="text-xs text-slate-500">
+    <article className="section-shell prose-page py-14 md:py-16">
+      <p className="text-xs text-muted">
         {article.publishedAt ? formatDateNL(article.publishedAt) : ""}
         {article.category ? ` · ${article.category.name}` : ""}
       </p>
-      <h1 className="mt-3 font-[family-name:var(--font-display)] text-4xl text-white md:text-5xl">
+      <h1 className="font-display mt-3 text-4xl text-ink md:text-5xl">
         {article.title}
       </h1>
       {article.excerpt && (
-        <p className="mt-4 text-lg text-slate-300">{article.excerpt}</p>
+        <p className="mt-4 text-lg text-muted">{article.excerpt}</p>
       )}
-      <div className="prose-scam mt-10 space-y-4 whitespace-pre-wrap text-slate-300 leading-relaxed">
+      <div className="mt-10 space-y-4 whitespace-pre-wrap leading-relaxed text-ink/90">
         {article.content}
+      </div>
+      <div className="mt-12 border-t border-line pt-6">
+        <Link href="/kennisbank" className="text-sm font-semibold text-accent hover:underline">
+          ← Terug naar kennisbank
+        </Link>
       </div>
     </article>
   );

@@ -23,46 +23,52 @@ export default async function AdminPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
-      <p className="text-xs uppercase tracking-[0.2em] text-teal-300/80">
+    <div className="section-shell py-12 md:py-16">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
         Admin
       </p>
-      <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl text-white">
+      <h1 className="font-display mt-2 text-4xl text-ink">
         Moderatie & overzicht
       </h1>
 
-      <div className="mt-8 flex flex-wrap gap-4 text-sm text-slate-300">
+      <div className="mt-8 flex flex-wrap gap-4 text-sm">
         {stats.map((s) => (
-          <div key={s.status} className="rounded-md border border-white/10 px-4 py-3">
-            <p className="text-xs uppercase text-slate-500">{s.status}</p>
-            <p className="text-2xl text-white">{s._count}</p>
+          <div key={s.status} className="border border-line bg-white px-4 py-3">
+            <p className="text-xs uppercase text-muted">{s.status}</p>
+            <p className="text-2xl font-semibold text-ink">{s._count}</p>
           </div>
         ))}
         <Link
           href="/admin/artikelen"
-          className="rounded-md border border-teal-400/40 px-4 py-3 text-teal-300"
+          className="border border-accent/40 bg-accent-soft px-4 py-3 font-medium text-accent"
         >
           CMS artikelen →
         </Link>
       </div>
 
-      <h2 className="mt-12 text-2xl text-white">Wachtend op moderatie</h2>
+      <h2 className="mt-12 text-2xl font-semibold text-ink">
+        Wachtend op moderatie
+      </h2>
       <div className="mt-4 space-y-6">
         {pending.map((report) => (
           <article
             key={report.id}
-            className="rounded-xl border border-white/10 bg-white/[0.03] p-5"
+            className="border border-line bg-white p-5"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted">
                   {formatDateNL(report.createdAt)}
                   {report.category ? ` · ${report.category.name}` : ""}
                 </p>
-                <h3 className="mt-1 text-lg text-white">{report.title}</h3>
-                <p className="mt-2 text-sm text-slate-400">{report.description}</p>
-                <p className="mt-2 text-xs text-slate-500">
-                  {report.domain?.domain ?? report.identifierValue ?? "geen domein"}
+                <h3 className="mt-1 text-lg font-semibold text-ink">
+                  {report.title}
+                </h3>
+                <p className="mt-2 text-sm text-muted">{report.description}</p>
+                <p className="mt-2 text-xs text-muted">
+                  {report.domain?.domain ??
+                    report.identifierValue ??
+                    "geen domein"}
                   {report.reporterEmail ? ` · ${report.reporterEmail}` : ""}
                 </p>
               </div>
@@ -70,14 +76,14 @@ export default async function AdminPage() {
                 <form action={moderateReport}>
                   <input type="hidden" name="id" value={report.id} />
                   <input type="hidden" name="action" value="APPROVED" />
-                  <button className="rounded-md bg-teal-400 px-3 py-1.5 text-sm font-medium text-[#062018]">
+                  <button className="btn-ink px-3 py-1.5 text-sm">
                     Goedkeuren
                   </button>
                 </form>
                 <form action={moderateReport}>
                   <input type="hidden" name="id" value={report.id} />
                   <input type="hidden" name="action" value="REJECTED" />
-                  <button className="rounded-md border border-rose-400/40 px-3 py-1.5 text-sm text-rose-300">
+                  <button className="rounded-md border border-danger/40 px-3 py-1.5 text-sm text-danger">
                     Afwijzen
                   </button>
                 </form>
@@ -86,7 +92,7 @@ export default async function AdminPage() {
           </article>
         ))}
         {pending.length === 0 && (
-          <p className="text-slate-400">Geen openstaande meldingen.</p>
+          <p className="text-muted">Geen openstaande meldingen.</p>
         )}
       </div>
     </div>

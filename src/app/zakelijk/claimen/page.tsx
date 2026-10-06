@@ -1,48 +1,54 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/auth-helpers";
 import { claimDomain } from "@/app/zakelijk/claimen/actions";
+import { BRAND_NAME } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "Domein claimen",
+};
 
 export default async function ClaimPage() {
   await requireUser();
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-14 md:px-6">
-      <h1 className="font-[family-name:var(--font-display)] text-4xl text-white">
-        Claim je website
-      </h1>
-      <p className="mt-4 text-slate-300">
-        Zakelijke accounts kunnen een domein claimen om te reageren op meldingen.
-        Accreditatie is optioneel en staat los van de Trust Score.
+    <div className="section-shell max-w-2xl py-14 md:py-16">
+      <Link href="/zakelijk" className="text-sm font-semibold text-accent hover:underline">
+        ← Voor bedrijven
+      </Link>
+      <h1 className="font-display mt-4 text-4xl text-ink">Claim je website</h1>
+      <p className="mt-4 text-muted">
+        Zakelijke accounts kunnen een domein claimen om te reageren op
+        meldingen. Accreditatie is optioneel en staat los van de Trust Score op{" "}
+        {BRAND_NAME}.
       </p>
       <form action={claimDomain} className="mt-8 space-y-4">
         <input
           name="domain"
           required
           placeholder="jouwbedrijf.nl"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-white"
+          className="input-field"
         />
         <input
           name="companyName"
           required
           placeholder="Bedrijfsnaam"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-white"
+          className="input-field"
         />
         <input
           name="contactEmail"
           type="email"
           required
           placeholder="zakelijk@email.nl"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-white"
+          className="input-field"
         />
         <input
           name="evidenceUrl"
           placeholder="Bewijs-URL (KvK, website, etc.)"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-white"
+          className="input-field"
         />
-        <button className="rounded-md bg-teal-400 px-4 py-2 font-medium text-[#062018]">
-          Claim indienen
-        </button>
+        <button className="btn-ink">Claim indienen</button>
       </form>
     </div>
   );

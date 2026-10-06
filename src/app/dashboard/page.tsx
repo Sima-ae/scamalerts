@@ -16,27 +16,24 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
+    <div className="section-shell py-12 md:py-16">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-teal-300/80">
-            Gebruikersdashboard
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+            Dashboard
           </p>
-          <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl text-white">
+          <h1 className="font-display mt-2 text-4xl text-ink">
             Hallo{session.user.name ? `, ${session.user.name}` : ""}
           </h1>
-          <p className="mt-2 text-slate-400">{session.user.email}</p>
+          <p className="mt-2 text-muted">{session.user.email}</p>
         </div>
-        <div className="flex gap-2">
-          <Link
-            href="/melden"
-            className="rounded-md bg-teal-400 px-4 py-2 text-sm font-medium text-[#062018]"
-          >
+        <div className="flex flex-wrap gap-2">
+          <Link href="/melden" className="btn-primary text-sm">
             Nieuwe melding
           </Link>
           <Link
             href="/zakelijk/claimen"
-            className="rounded-md border border-white/15 px-4 py-2 text-sm text-slate-200"
+            className="rounded-md border border-line bg-white px-4 py-2 text-sm text-ink"
           >
             Zakelijk
           </Link>
@@ -46,33 +43,34 @@ export default async function DashboardPage() {
               await signOut({ redirectTo: "/" });
             }}
           >
-            <button className="rounded-md border border-white/15 px-4 py-2 text-sm text-slate-200">
+            <button className="rounded-md border border-line bg-white px-4 py-2 text-sm text-ink">
               Uitloggen
             </button>
           </form>
         </div>
       </div>
 
-      <h2 className="mt-12 font-[family-name:var(--font-display)] text-2xl text-white">
-        Jouw meldingen
-      </h2>
-      <div className="mt-4 divide-y divide-white/10">
+      <h2 className="font-display mt-12 text-2xl text-ink">Jouw meldingen</h2>
+      <div className="mt-4 divide-y divide-line">
         {reports.map((r) => (
-          <div key={r.id} className="flex items-center justify-between gap-4 py-4">
+          <div
+            key={r.id}
+            className="flex items-center justify-between gap-4 py-4"
+          >
             <div>
-              <p className="text-white">{r.title}</p>
-              <p className="text-xs text-slate-500">
+              <p className="font-medium text-ink">{r.title}</p>
+              <p className="text-xs text-muted">
                 {formatDateNL(r.createdAt)}
                 {r.domain ? ` · ${r.domain.domain}` : ""}
               </p>
             </div>
-            <span className="text-xs uppercase tracking-wide text-slate-400">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
               {r.status}
             </span>
           </div>
         ))}
         {reports.length === 0 && (
-          <p className="py-6 text-slate-400">Je hebt nog geen meldingen geplaatst.</p>
+          <p className="py-6 text-muted">Je hebt nog geen meldingen geplaatst.</p>
         )}
       </div>
     </div>

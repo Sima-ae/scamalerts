@@ -1,143 +1,209 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { analyzeDomain, trustLabelNL } from "@/lib/trust-score";
+import {
+  analyzeDomain,
+  groupSignals,
+  trustLabelNL,
+} from "@/lib/trust-score";
 import { formatDateNL, normalizeDomain } from "@/lib/utils";
 import { DomainSearch } from "@/components/domain-search";
+import { BRAND_NAME } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
 export default async function DomainResultPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ domain: string }>;
+  searchParams: Promise<{ refresh?: string }>;
 }) {
   const { domain: raw } = await params;
+  const sp = await searchParams;
   const domain = normalizeDomain(decodeURIComponent(raw));
   if (!domain || domain.length < 3) notFound();
 
-  const analysis = await analyzeDomain(domain);
+  const refresh = sp.refresh === "1";
+  let dbUnavailable = false;
 
-  const profile = await prisma.domainProfile.upsert({
-    where: { domain },
-    update: {
-      trustScore: analysis.score,
-      trustLabel: analysis.label,
-      signals: analysis.signals,
-      viewCount: { increment: 1 },
-    },
-    create: {
-      domain,
-      trustScore: analysis.score,
-      trustLabel: analysis.label,
-      signals: analysis.signals,
-      viewCount: 1,
-    },
+  const analysis = await analyzeDomain(domain, {
+    refresh,
+    persist: true,
+  }).catch(async () => {
+    dbUnavailable = true;
+    return analyzeDomain(domain, { refresh: true, persist: false });
   });
 
-  const reports = await prisma.scamReport.findMany({
-    where: { domainId: profile.id, status: "APPROVED" },
-    orderBy: { publishedAt: "desc" },
-    take: 10,
-  });
+  let lastUpdated = new Date(analysis.collectedAt);
+  let reports: {
+    id: string;
+    title: string;
+    description: string;
+    publishedAt: Date | null;
+    createdAt: Date;
+    categoryName: string | null;
+  }[] = [];
+
+  try {
+    const profile = await prisma.domainProfile.findUnique({
+      where: { domain },
+    });
+    if (profile) {
+      lastUpdated = profile.lastUpdated;
+      await prisma.domainProfile.update({
+        where: { id: profile.id },
+        data: { viewCount: { increment: 1 } },
+      });
+      const rows = await prisma.scamReport.findMany({
+        where: { domainId: profile.id, status: "APPROVED" },
+        orderBy: { publishedAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          publishedAt: true,
+          createdAt: true,
+          category: { select: { name: true } },
+        },
+      });
+      reports = rows.map((r) => ({
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        publishedAt: r.publishedAt,
+        createdAt: r.createdAt,
+        categoryName: r.category?.name ?? null,
+      }));
+    }
+  } catch {
+    dbUnavailable = true;
+  }
 
   const scoreColor =
     analysis.score >= 61
-      ? "text-teal-300"
+      ? "text-trust"
       : analysis.score >= 41
-        ? "text-amber-300"
-        : "text-rose-400";
+        ? "text-amber-700"
+        : "text-danger";
+
+  const groups = groupSignals(analysis.signals);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
+    <div className="section-shell py-12 md:py-16">
       <DomainSearch initial={domain} />
 
-      <div className="mt-10 grid gap-10 lg:grid-cols-[280px_1fr]">
-        <div className="score-ring flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5 p-8">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+      {dbUnavailable && (
+        <p className="mt-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Live database tijdelijk niet bereikbaar. Je ziet de technische
+          analyse; meldingen worden mogelijk niet opgeslagen.
+        </p>
+      )}
+
+      <div className="mt-10 grid gap-10 lg:grid-cols-[260px_1fr]">
+        <div className="flex flex-col items-center justify-center border border-line bg-white px-8 py-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
             Trust Score
           </p>
           <p className={`mt-3 text-6xl font-semibold ${scoreColor}`}>
             {analysis.score}
           </p>
-          <p className="mt-2 text-center text-sm text-slate-300">
+          <p className="mt-2 text-center text-sm text-ink">
             {trustLabelNL(analysis.label)}
           </p>
-          <p className="mt-6 text-center text-xs text-slate-500">
-            Laatst bijgewerkt {formatDateNL(profile.lastUpdated)}
+          <p className="mt-6 text-center text-xs text-muted">
+            {analysis.cached ? "Uit cache · " : "Live scan · "}
+            {formatDateNL(lastUpdated)}
           </p>
+          <Link
+            href={`/controleren/${encodeURIComponent(domain)}?refresh=1`}
+            className="mt-4 text-xs font-semibold text-accent hover:underline"
+          >
+            Opnieuw scannen
+          </Link>
         </div>
 
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl text-white md:text-4xl">
+          <h1 className="font-display text-3xl text-ink md:text-4xl">
             {domain}
           </h1>
-          <p className="mt-3 max-w-2xl text-slate-300">
-            Analyse voor all-scams.com. Dit is geen juridisch oordeel — wel een
-            transparante risico-indicatie om sneller verdachte signalen te
-            herkennen.
+          <p className="mt-3 max-w-2xl text-muted">
+            Analyse via {BRAND_NAME} op basis van DNS, TLS, RDAP-leeftijd,
+            HTTPS-gedrag en goedgekeurde meldingen. Dit is geen juridisch
+            vonnis — wel een transparante risico-indicatie.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href={`/melden?domain=${encodeURIComponent(domain)}`}
-              className="rounded-md bg-rose-500 px-4 py-2 text-sm font-medium text-white hover:bg-rose-400"
+              className="btn-primary text-sm"
             >
               Scam melden over dit domein
             </Link>
             <Link
               href="/zakelijk/claimen"
-              className="rounded-md border border-white/15 px-4 py-2 text-sm text-slate-200 hover:bg-white/5"
+              className="rounded-md border border-line bg-white px-4 py-2 text-sm font-medium text-ink hover:bg-surface"
             >
               Bedrijf claimen
             </Link>
           </div>
 
-          <h2 className="mt-12 font-[family-name:var(--font-display)] text-2xl text-white">
-            Signalen
-          </h2>
-          <ul className="mt-4 divide-y divide-white/10 border-y border-white/10">
-            {analysis.signals.map((signal) => (
-              <li
-                key={signal.key}
-                className="flex items-start justify-between gap-4 py-4"
-              >
-                <div>
-                  <p className="font-medium text-white">{signal.label}</p>
-                  <p className="mt-1 text-sm text-slate-400">{signal.detail}</p>
-                </div>
-                <span
-                  className={`shrink-0 text-xs uppercase tracking-wide ${
-                    signal.positive === true
-                      ? "text-teal-300"
-                      : signal.positive === false
-                        ? "text-rose-400"
-                        : "text-slate-500"
-                  }`}
-                >
-                  {signal.positive === true
-                    ? "Positief"
-                    : signal.positive === false
-                      ? "Negatief"
-                      : "Neutraal"}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {groups.map((group) => (
+            <section key={group.group} className="mt-12">
+              <h2 className="font-display text-2xl text-ink">{group.title}</h2>
+              <ul className="mt-4 divide-y divide-line border-y border-line">
+                {group.items.map((signal) => (
+                  <li
+                    key={signal.key}
+                    className="flex items-start justify-between gap-4 py-4"
+                  >
+                    <div>
+                      <p className="font-medium text-ink">{signal.label}</p>
+                      <p className="mt-1 text-sm leading-relaxed text-muted">
+                        {signal.detail}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 text-xs font-semibold uppercase tracking-wide ${
+                        signal.positive === true
+                          ? "text-trust"
+                          : signal.positive === false
+                            ? "text-danger"
+                            : "text-muted"
+                      }`}
+                    >
+                      {signal.positive === true
+                        ? "Positief"
+                        : signal.positive === false
+                          ? "Negatief"
+                          : "Neutraal"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
 
-          <h2 className="mt-12 font-[family-name:var(--font-display)] text-2xl text-white">
+          <h2 className="font-display mt-12 text-2xl text-ink">
             Gerelateerde meldingen
           </h2>
           {reports.length === 0 ? (
-            <p className="mt-4 text-slate-400">
-              Nog geen goedgekeurde meldingen voor dit domein.
+            <p className="mt-4 text-muted">
+              {dbUnavailable
+                ? "Meldingen kunnen nu niet worden geladen."
+                : "Nog geen goedgekeurde meldingen voor dit domein."}
             </p>
           ) : (
             <ul className="mt-4 space-y-4">
               {reports.map((r) => (
-                <li key={r.id} className="border-l-2 border-teal-400/40 pl-4">
-                  <p className="text-white">{r.title}</p>
-                  <p className="mt-1 text-sm text-slate-400 line-clamp-2">
+                <li key={r.id} className="border-l-2 border-accent pl-4">
+                  <p className="text-xs text-muted">
+                    {formatDateNL(r.publishedAt ?? r.createdAt)}
+                    {r.categoryName ? ` · ${r.categoryName}` : ""}
+                  </p>
+                  <p className="mt-1 font-medium text-ink">{r.title}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-muted">
                     {r.description}
                   </p>
                 </li>

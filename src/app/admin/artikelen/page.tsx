@@ -13,45 +13,43 @@ export default async function AdminArticlesPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
-      <Link href="/admin" className="text-sm text-teal-300 hover:underline">
+    <div className="section-shell py-12 md:py-16">
+      <Link href="/admin" className="text-sm font-semibold text-accent hover:underline">
         ← Terug naar admin
       </Link>
-      <h1 className="mt-4 font-[family-name:var(--font-display)] text-4xl text-white">
-        CMS artikelen
-      </h1>
+      <h1 className="font-display mt-4 text-4xl text-ink">CMS artikelen</h1>
 
-      <form action={createArticle} className="mt-8 max-w-2xl space-y-4 rounded-xl border border-white/10 p-5">
-        <h2 className="text-lg text-white">Nieuw artikel</h2>
+      <form
+        action={createArticle}
+        className="mt-8 max-w-2xl space-y-4 border border-line bg-white p-5"
+      >
+        <h2 className="text-lg font-semibold text-ink">Nieuw artikel</h2>
         <input
           name="title"
           required
           placeholder="Titel"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-white"
+          className="input-field"
         />
         <input
           name="slug"
           required
           placeholder="slug-voorbeeld"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-white"
+          className="input-field"
         />
         <textarea
           name="excerpt"
           placeholder="Korte samenvatting"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-white"
+          className="input-field"
           rows={2}
         />
         <textarea
           name="content"
           required
-          placeholder="Volledige inhoud (Markdown-achtige tekst)"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-white"
+          placeholder="Volledige inhoud"
+          className="input-field"
           rows={8}
         />
-        <select
-          name="categoryId"
-          className="w-full rounded-md border border-white/15 bg-[#0b1a29] px-3 py-2 text-white"
-        >
+        <select name="categoryId" className="input-field">
           <option value="">Geen categorie</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -59,19 +57,17 @@ export default async function AdminArticlesPage() {
             </option>
           ))}
         </select>
-        <label className="flex items-center gap-2 text-sm text-slate-300">
+        <label className="flex items-center gap-2 text-sm text-ink">
           <input type="checkbox" name="publish" value="1" /> Direct publiceren
         </label>
-        <button className="rounded-md bg-teal-400 px-4 py-2 font-medium text-[#062018]">
-          Opslaan
-        </button>
+        <button className="btn-ink">Opslaan</button>
       </form>
 
-      <ul className="mt-10 divide-y divide-white/10">
+      <ul className="mt-10 divide-y divide-line">
         {articles.map((a) => (
           <li key={a.id} className="flex justify-between py-3 text-sm">
-            <span className="text-white">{a.title}</span>
-            <span className="text-slate-500">{a.status}</span>
+            <span className="text-ink">{a.title}</span>
+            <span className="text-muted">{a.status}</span>
           </li>
         ))}
       </ul>

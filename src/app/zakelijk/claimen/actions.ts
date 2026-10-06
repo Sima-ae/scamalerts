@@ -17,19 +17,14 @@ export async function claimDomain(formData: FormData) {
     redirect("/zakelijk/claimen");
   }
 
-  const analysis = await analyzeDomain(domain);
+  // Reuse cached analysis (24h) — analyzeDomain persists DomainProfile.
+  await analyzeDomain(domain);
   const profile = await prisma.domainProfile.upsert({
     where: { domain },
-    update: {
-      trustScore: analysis.score,
-      trustLabel: analysis.label,
-      signals: analysis.signals,
-    },
+    update: { claimed: true },
     create: {
       domain,
-      trustScore: analysis.score,
-      trustLabel: analysis.label,
-      signals: analysis.signals,
+      claimed: true,
     },
   });
 
