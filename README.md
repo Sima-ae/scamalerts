@@ -28,7 +28,7 @@ npm run dev            # http://localhost:3010
 - PM2 name: `all-scams`
 - Poort: `3010`
 - Domain: `https://all-scams.com`
-- Deploy: push naar `main` → GitHub Actions SSH deploy
+- Deploy: push naar `main` → GitHub Actions **bouwt op ubuntu-latest** en uploadt de standalone-build (de VPS heeft te oude glibc voor native Next SWC)
 
 ## Admin
 

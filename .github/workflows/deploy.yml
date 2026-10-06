@@ -1,4 +1,6 @@
-# Deploy all-scams.com to VPS on push to main.
+# Build on GitHub Actions (modern glibc), deploy standalone artifact to VPS.
+# The VPS glibc is too old for @next/swc-linux-x64-gnu (needs GLIBC_2.29+),
+# so we never run `next build` on the server.
 #
 # Secrets: VPS_HOST, VPS_USER, VPS_SSH_KEY, VPS_APP_PATH (optional)
 
@@ -14,10 +16,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Build Next.js
+        env:
+          AUTH_SECRET: "ci-build-placeholder-not-used-at-runtime"
+          AUTH_URL: "https://all-scams.com"
+          NEXT_PUBLIC_APP_URL: "https://all-scams.com"
+          NEXT_PUBLIC_SITE_NAME: "All Scams"
+          NEXT_PUBLIC_SITE_DOMAIN: "all-scams.com"
+          DATABASE_URL: "mysql://build:build@127.0.0.1:3306/build"
+        run: npm run build
+
+      - name: Pack standalone release
+        run: |
+          set -euo pipefail
+          ROOT=/tmp/all-scams-release
+          rm -rf "$ROOT"
+          mkdir -p "$ROOT/.next/standalone/.next"
+
+          # PM2 runs: APP_DIR/.next/standalone/server.js
+          cp -a .next/standalone/. "$ROOT/.next/standalone/"
+          cp -a .next/static "$ROOT/.next/standalone/.next/static"
+          cp -a public "$ROOT/.next/standalone/public"
+
+          cp -a prisma "$ROOT/prisma"
+          cp -a scripts "$ROOT/scripts"
+          cp package.json package-lock.json ecosystem.config.cjs "$ROOT/"
+
+          tar -C "$ROOT" -czf /tmp/all-scams-release.tar.gz .
+          ls -lh /tmp/all-scams-release.tar.gz
+
       - name: Deploy over SSH
         env:
           SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -40,27 +86,43 @@ jobs:
           printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$KEY_FILE"
           chmod 600 "$KEY_FILE"
 
-          SSH_OPTS=(-T -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o IdentitiesOnly=yes -i "$KEY_FILE")
+          SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o BatchMode=yes -o IdentitiesOnly=yes -i "$KEY_FILE")
           APP_DIR="${VPS_APP_PATH:-/home/all-scams.com/app}"
+
+          scp "${SSH_OPTS[@]}" /tmp/all-scams-release.tar.gz \
+            "${VPS_USER}@${VPS_HOST}:/tmp/all-scams-release.tar.gz"
 
           ssh "${SSH_OPTS[@]}" "${VPS_USER}@${VPS_HOST}" bash -s <<EOF
           set -euo pipefail
           APP_DIR="${APP_DIR}"
-          git config --global --add safe.directory "\$APP_DIR" || true
+
+          if [[ -x "\$APP_DIR/scripts/ensure-free-port.sh" ]]; then
+            bash "\$APP_DIR/scripts/ensure-free-port.sh" 3010 all-scams || true
+          fi
+
+          ENV_BAK=""
+          if [[ -f "\$APP_DIR/.env" ]]; then
+            ENV_BAK=\$(mktemp)
+            cp -a "\$APP_DIR/.env" "\$ENV_BAK"
+          fi
+
+          mkdir -p "\$APP_DIR"
+          tar -xzf /tmp/all-scams-release.tar.gz -C "\$APP_DIR"
+          rm -f /tmp/all-scams-release.tar.gz
+
+          if [[ -n "\$ENV_BAK" ]]; then
+            cp -a "\$ENV_BAK" "\$APP_DIR/.env"
+            cp -a "\$ENV_BAK" "\$APP_DIR/.next/standalone/.env"
+            rm -f "\$ENV_BAK"
+          elif [[ -f "\$APP_DIR/.env" ]]; then
+            cp -a "\$APP_DIR/.env" "\$APP_DIR/.next/standalone/.env"
+          fi
+
           cd "\$APP_DIR"
-          bash scripts/ensure-free-port.sh 3010 all-scams
-          git fetch origin main
-          git reset --hard origin/main
-          # Keep previous .next until new build succeeds
-          rm -rf node_modules
-          npm ci
-          npx prisma generate
-          npx prisma migrate deploy
-          npm run build
-          mkdir -p .next/standalone/.next
-          cp -a .next/static .next/standalone/.next/static
-          cp -a public .next/standalone/public 2>/dev/null || true
-          cp -a .env .next/standalone/.env 2>/dev/null || true
+          npx --yes prisma@6.19.3 migrate deploy --schema=prisma/schema.prisma
+
+          test -f .next/standalone/server.js
+
           pm2 startOrReload ecosystem.config.cjs --update-env
           pm2 save
           sleep 3
