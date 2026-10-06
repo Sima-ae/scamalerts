@@ -112,8 +112,8 @@ export default async function DomainResultPage({
 
       {dbUnavailable && (
         <p className="mt-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Live database tijdelijk niet bereikbaar. Je ziet de technische
-          analyse; meldingen worden mogelijk niet opgeslagen.
+          Database/opslag tijdelijk niet beschikbaar. Je ziet wel de technische
+          analyse; scores en meldingen worden mogelijk niet bewaard.
         </p>
       )}
 

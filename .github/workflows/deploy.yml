@@ -57,12 +57,26 @@ jobs:
           cp -a .next/static "$ROOT/.next/standalone/.next/static"
           cp -a public "$ROOT/.next/standalone/public"
 
+          # Next standalone tracing often omits extra Prisma engine binaries.
+          # VPS needs rhel-openssl-1.1.x (generated via schema binaryTargets).
+          mkdir -p "$ROOT/.next/standalone/node_modules/.prisma/client"
+          mkdir -p "$ROOT/.next/standalone/node_modules/@prisma/client"
+          cp -a node_modules/.prisma/client/. \
+            "$ROOT/.next/standalone/node_modules/.prisma/client/"
+          if [[ -d node_modules/@prisma/client ]]; then
+            cp -a node_modules/@prisma/client/. \
+              "$ROOT/.next/standalone/node_modules/@prisma/client/" 2>/dev/null || true
+          fi
+          test -f "$ROOT/.next/standalone/node_modules/.prisma/client/libquery_engine-rhel-openssl-1.1.x.so.node"
+
           cp -a prisma "$ROOT/prisma"
           cp -a scripts "$ROOT/scripts"
           cp package.json package-lock.json ecosystem.config.cjs "$ROOT/"
 
           tar -C "$ROOT" -czf /tmp/all-scams-release.tar.gz .
           ls -lh /tmp/all-scams-release.tar.gz
+          echo "Prisma engines in package:"
+          ls "$ROOT/.next/standalone/node_modules/.prisma/client"/libquery_engine* || true
 
       - name: Deploy over SSH
         env:
