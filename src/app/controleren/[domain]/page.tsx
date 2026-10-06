@@ -9,8 +9,13 @@ import {
 import { formatDateNL, normalizeDomain } from "@/lib/utils";
 import { DomainSearch } from "@/components/domain-search";
 import { BRAND_NAME } from "@/lib/brand";
+import type { TrustSignal } from "@/lib/trust/types";
 
 export const dynamic = "force-dynamic";
+
+function riskHighlights(signals: TrustSignal[]) {
+  return signals.filter((s) => s.positive === false);
+}
 
 export default async function DomainResultPage({
   params,
@@ -89,6 +94,12 @@ export default async function DomainResultPage({
         : "text-danger";
 
   const groups = groupSignals(analysis.signals);
+  const risks = riskHighlights(analysis.signals);
+  const spoof = analysis.signals.find((s) => s.key === "spoof");
+  const spoofTarget =
+    spoof?.raw && typeof spoof.raw.target === "string"
+      ? spoof.raw.target
+      : null;
 
   return (
     <div className="section-shell py-12 md:py-16">
@@ -101,38 +112,79 @@ export default async function DomainResultPage({
         </p>
       )}
 
-      <div className="mt-10 grid gap-10 lg:grid-cols-[260px_1fr]">
-        <div className="flex flex-col items-center justify-center border border-line bg-white px-8 py-10">
+      <div className="mt-10 grid gap-10 lg:grid-cols-[280px_1fr]">
+        <aside className="h-fit border border-line bg-white px-8 py-10 lg:sticky lg:top-24">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
             Trust Score
           </p>
           <p className={`mt-3 text-6xl font-semibold ${scoreColor}`}>
             {analysis.score}
           </p>
-          <p className="mt-2 text-center text-sm text-ink">
+          <p className="mt-2 text-center text-sm font-medium text-ink lg:text-left">
             {trustLabelNL(analysis.label)}
           </p>
-          <p className="mt-6 text-center text-xs text-muted">
-            {analysis.cached ? "Uit cache · " : "Live scan · "}
-            {formatDateNL(lastUpdated)}
+          <dl className="mt-8 space-y-3 border-t border-line pt-6 text-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted">Signalen</dt>
+              <dd className="font-medium text-ink">{analysis.signals.length}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted">Risico’s</dt>
+              <dd className="font-medium text-ink">{risks.length}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted">Bron</dt>
+              <dd className="font-medium text-ink">
+                {analysis.cached ? "Cache" : "Live"}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-6 text-xs text-muted">
+            Bijgewerkt {formatDateNL(lastUpdated)}
           </p>
           <Link
             href={`/controleren/${encodeURIComponent(domain)}?refresh=1`}
-            className="mt-4 text-xs font-semibold text-accent hover:underline"
+            className="mt-3 inline-block text-xs font-semibold text-accent hover:underline"
           >
             Opnieuw scannen
           </Link>
-        </div>
+        </aside>
 
         <div>
           <h1 className="font-display text-3xl text-ink md:text-4xl">
             {domain}
           </h1>
           <p className="mt-3 max-w-2xl text-muted">
-            Analyse via {BRAND_NAME} op basis van DNS, TLS, RDAP-leeftijd,
-            HTTPS-gedrag en goedgekeurde meldingen. Dit is geen juridisch
-            vonnis — wel een transparante risico-indicatie.
+            Analyse via {BRAND_NAME}: DNS, TLS, RDAP-leeftijd, HTTPS-gedrag,
+            typosquat/lookalike-detectie en community-meldingen. Informatief —
+            geen juridisch oordeel.
           </p>
+
+          {risks.length > 0 && (
+            <div className="mt-8 border border-danger/25 bg-[color-mix(in_oklab,var(--danger)_6%,white)] px-5 py-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-danger">
+                Belangrijkste bevindingen
+              </p>
+              <ul className="mt-3 space-y-2.5">
+                {risks.map((r) => (
+                  <li key={r.key} className="text-sm leading-relaxed text-ink">
+                    <span className="font-semibold">{r.label}:</span> {r.detail}
+                  </li>
+                ))}
+              </ul>
+              {spoofTarget && (
+                <p className="mt-4 text-sm text-ink">
+                  Vergelijk met het waarschijnlijke origineel:{" "}
+                  <Link
+                    href={`/controleren/${encodeURIComponent(spoofTarget)}`}
+                    className="font-semibold text-accent hover:underline"
+                  >
+                    {spoofTarget}
+                  </Link>
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
@@ -156,13 +208,23 @@ export default async function DomainResultPage({
                 {group.items.map((signal) => (
                   <li
                     key={signal.key}
-                    className="flex items-start justify-between gap-4 py-4"
+                    className={`flex items-start justify-between gap-4 py-4 ${
+                      signal.positive === false ? "bg-[color-mix(in_oklab,var(--danger)_4%,transparent)]" : ""
+                    }`}
                   >
                     <div>
                       <p className="font-medium text-ink">{signal.label}</p>
                       <p className="mt-1 text-sm leading-relaxed text-muted">
                         {signal.detail}
                       </p>
+                      {signal.key === "spoof" && spoofTarget && (
+                        <Link
+                          href={`/controleren/${encodeURIComponent(spoofTarget)}`}
+                          className="mt-2 inline-block text-sm font-semibold text-accent hover:underline"
+                        >
+                          Bekijk score van {spoofTarget} →
+                        </Link>
+                      )}
                     </div>
                     <span
                       className={`shrink-0 text-xs font-semibold uppercase tracking-wide ${

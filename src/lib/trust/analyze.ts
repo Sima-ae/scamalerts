@@ -7,6 +7,7 @@ import { collectTls } from "@/lib/trust/collectors/tls";
 import { collectRdap } from "@/lib/trust/collectors/rdap";
 import { collectHttp } from "@/lib/trust/collectors/http";
 import { collectReports } from "@/lib/trust/collectors/reports";
+import { collectSpoof } from "@/lib/trust/collectors/spoof";
 import {
   TRUST_CACHE_TTL_MS,
   TRUST_SIGNALS_VERSION,
@@ -112,6 +113,7 @@ export async function analyzeDomain(
     collectRdap(domain),
     collectHttp(domain),
     collectReports(domain),
+    collectSpoof(domain),
   ]);
 
   const signals: TrustSignal[] = [...heuristicSignals];

@@ -34,5 +34,5 @@ export type SignalsPayload = {
   items: TrustSignal[];
 };
 
-export const TRUST_SIGNALS_VERSION = 2;
+export const TRUST_SIGNALS_VERSION = 3;
 export const TRUST_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
