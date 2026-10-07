@@ -9,6 +9,7 @@ import "@fontsource/source-sans-3/700.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Providers } from "@/components/providers";
+import { ContentProtection } from "@/components/content-protection";
 import { BRAND_NAME, BRAND_URL } from "@/lib/brand";
 import "./globals.css";
 
@@ -44,11 +45,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="nl" className="h-full antialiased">
-      <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
+      <body className="content-protect flex min-h-full flex-col bg-background font-sans text-foreground">
         <Providers>
           <SiteHeader />
           <main className="flex-1">{children}</main>
           <SiteFooter />
+          <ContentProtection />
         </Providers>
       </body>
     </html>

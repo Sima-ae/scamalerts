@@ -42,6 +42,31 @@ a {
   text-decoration: none;
 }
 
+/* Soft content protection — forms stay usable */
+.content-protect {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.content-protect input,
+.content-protect textarea,
+.content-protect select,
+.content-protect [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.content-protect img,
+.content-protect svg {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+.content-protect-layer {
+  z-index: 2147483647 !important;
+  isolation: isolate;
+}
+
 ::selection {
   background: color-mix(in oklab, var(--accent) 28%, white);
 }
