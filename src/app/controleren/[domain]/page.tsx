@@ -52,13 +52,13 @@ export default async function DomainResultPage({
   const refresh = sp.refresh === "1";
   let dbUnavailable = false;
 
-  const analysis = await analyzeDomain(domain, {
-    refresh,
-    persist: true,
-  }).catch(async () => {
+  let analysis: Awaited<ReturnType<typeof analyzeDomain>>;
+  try {
+    analysis = await analyzeDomain(domain, { refresh, persist: true });
+  } catch {
     dbUnavailable = true;
-    return analyzeDomain(domain, { refresh: true, persist: false });
-  });
+    analysis = await analyzeDomain(domain, { refresh: true, persist: false });
+  }
 
   let lastUpdated = new Date(analysis.collectedAt);
   let reports: {
@@ -176,13 +176,13 @@ export default async function DomainResultPage({
             <div className="flex flex-col items-center gap-3 lg:items-stretch lg:justify-center">
               <Link
                 href={`/melden?domain=${encodeURIComponent(domain)}`}
-                className="btn-primary w-full min-w-[200px] text-sm"
+                className="btn-primary w-full min-w-50 text-sm"
               >
                 Scam melden
               </Link>
               <Link
                 href="/zakelijk/claimen"
-                className="inline-flex w-full min-w-[200px] items-center justify-center rounded-md border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink/25 hover:bg-surface"
+                className="inline-flex w-full min-w-50 items-center justify-center rounded-md border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink/25 hover:bg-surface"
               >
                 Bedrijf claimen
               </Link>

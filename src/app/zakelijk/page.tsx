@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BRAND_NAME } from "@/lib/brand";
-import { PageShell, PageHero } from "@/components/ui/page-shell";
+import { PageShell } from "@/components/ui/page-shell";
+import { MEDIA } from "@/lib/media";
 import { AnimatedItem } from "@/components/ui/animated-section";
 
 export const metadata = {
@@ -10,14 +11,16 @@ export const metadata = {
 
 export default function ZakelijkPage() {
   return (
-    <PageShell>
-      <PageHero
-        eyebrow="Zakelijk"
-        title="Laat zien dat jullie merk serieus omgaat met misbruik"
-        description="Scammers lenen graag bekende namen. Met een geclaimd profiel kun je bereikbaar zijn voor vragen, context geven bij meldingen en laten zien hoe klanten jullie échte kanalen herkennen."
-      />
-
-      <div className="mx-auto mt-14 grid max-w-lg gap-10 border-t border-line pt-12 text-center sm:max-w-none md:grid-cols-3 md:text-left">
+    <PageShell
+      hero={{
+        eyebrow: "Zakelijk",
+        title: "Laat zien dat jullie merk serieus omgaat met misbruik",
+        description:
+          "Scammers lenen graag bekende namen. Met een geclaimd profiel kun je bereikbaar zijn voor vragen, context geven bij meldingen en laten zien hoe klanten jullie échte kanalen herkennen.",
+        media: MEDIA.business,
+      }}
+    >
+      <div className="mx-auto grid max-w-lg gap-10 text-center sm:max-w-none md:grid-cols-3 md:text-left">
         {[
           {
             title: "Domein claimen",

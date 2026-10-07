@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { Loader2, Search } from "lucide-react";
 import { CheckingStatus } from "@/components/checking-status";
 
@@ -19,24 +19,33 @@ export function DomainSearch({
   const [value, setValue] = useState(initial);
   const [pending, setPending] = useState(false);
   const [pendingQuery, setPendingQuery] = useState("");
+  const [prevPath, setPrevPath] = useState(pathname);
+  const [prevInitial, setPrevInitial] = useState(initial);
   const hero = variant === "hero";
 
-  useEffect(() => {
+  if (pathname !== prevPath) {
+    setPrevPath(pathname);
     setPending(false);
     setPendingQuery("");
-  }, [pathname]);
-
-  useEffect(() => {
+  }
+  if (initial !== prevInitial) {
+    setPrevInitial(initial);
     setValue(initial);
-  }, [initial]);
+  }
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     const q = value.trim();
     if (!q || pending) return;
+    const target = `/controleren/${encodeURIComponent(q)}`;
+    // Same URL never changes pathname, so the overlay would never clear.
+    if (target === pathname) {
+      router.refresh();
+      return;
+    }
     setPending(true);
     setPendingQuery(q);
-    router.push(`/controleren/${encodeURIComponent(q)}`);
+    router.push(target);
   }
 
   return (

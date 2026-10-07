@@ -414,6 +414,148 @@ a {
     radial-gradient(500px 220px at 0% 0%, rgba(194, 65, 12, 0.06), transparent 60%);
 }
 
+/* Scroll reveal — hidden only when JS is confirmed running */
+.js .reveal:not(.is-visible) {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+}
+
+.js .reveal-item:not(.is-visible) {
+  transform: translate3d(0, 18px, 0);
+}
+
+.reveal {
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal:not(.is-visible) {
+    opacity: 1;
+    transform: none;
+  }
+
+  .reveal {
+    transition: none;
+  }
+}
+
+/* Inner page banner: ink plane + drifting grid, same language as the hero */
+.page-banner {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(160deg, #1a334f 0%, #0f1c2e 60%, #2a1a14 100%);
+  color: #f5f7fa;
+}
+
+.page-banner::before {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  z-index: 1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 80% at 50% 50%, black, transparent 80%);
+  animation: drift 24s linear infinite alternate;
+  pointer-events: none;
+}
+
+.page-banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(ellipse 45% 60% at 85% 20%, rgba(194, 65, 12, 0.25), transparent 70%);
+  pointer-events: none;
+}
+
+/* Moving topic strip */
+@keyframes marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.marquee {
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+
+.marquee-track {
+  animation: marquee 48s linear infinite;
+}
+
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+/* Staggered rows inside the hero example card */
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.preview-row {
+  animation: row-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.photo-card {
+  box-shadow: 0 40px 80px -48px rgba(15, 28, 46, 0.55);
+}
+
+.photo-card img {
+  transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.photo-card:hover img {
+  transform: scale(1.04);
+}
+
+/* "Hoe het werkt" connecting line */
+@keyframes line-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.step-line {
+  transform-origin: left;
+  animation: line-grow 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+}
+
+.site-header[data-scrolled="true"] {
+  box-shadow: 0 12px 32px -24px rgba(15, 28, 46, 0.45);
+  background: color-mix(in oklab, white 88%, var(--background));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-banner::before,
+  .marquee-track,
+  .preview-row,
+  .step-line {
+    animation: none !important;
+  }
+
+  .photo-card img {
+    transition: none;
+  }
+}
+
 @keyframes checking-slide {
   0% {
     transform: translateX(-120%);

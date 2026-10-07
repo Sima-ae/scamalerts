@@ -1,5 +1,5 @@
 import { BRAND_NAME, BRAND_DOMAIN } from "@/lib/brand";
-import { PageShell, PageHero } from "@/components/ui/page-shell";
+import { PageShell } from "@/components/ui/page-shell";
 
 export const metadata = {
   title: "Over ons",
@@ -8,9 +8,15 @@ export const metadata = {
 
 export default function OverOnsPage() {
   return (
-    <PageShell>
-      <PageHero eyebrow="Platform" title={`Over ${BRAND_NAME}`} />
-      <div className="prose-page mx-auto mt-10 space-y-4 text-center leading-relaxed text-muted md:text-left">
+    <PageShell
+      hero={{
+        eyebrow: "Platform",
+        title: `Over ${BRAND_NAME}`,
+        description:
+          "Onafhankelijk, Nederlandstalig en zonder paniektaal: zo helpen we je online fraude eerder te herkennen.",
+      }}
+    >
+      <div className="prose-page mx-auto space-y-4 text-center leading-relaxed text-muted md:text-left">
         <p>
           {BRAND_NAME} ({BRAND_DOMAIN}) is een Nederlandstalig platform om
           websites te checken, verdachte praktijken te melden en heldere uitleg

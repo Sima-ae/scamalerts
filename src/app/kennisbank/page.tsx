@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatDateNL } from "@/lib/utils";
-import { PageShell, PageHero } from "@/components/ui/page-shell";
+import { PageShell } from "@/components/ui/page-shell";
+import { MEDIA } from "@/lib/media";
 import { AnimatedItem } from "@/components/ui/animated-section";
 
 export const dynamic = "force-dynamic";
@@ -32,14 +33,16 @@ export default async function KennisbankPage({
   }).catch(() => []);
 
   return (
-    <PageShell>
-      <PageHero
-        eyebrow="Leren"
-        title="Kennisbank"
-        description="Uitleg over scam-vormen die in Nederland veel voorkomen: hoe ze werken, welke signalen je moet zien en wat je kunt doen als het misgaat."
-      />
-
-      <div className="mx-auto mt-10 flex max-w-4xl flex-wrap justify-center gap-2 md:max-w-none md:justify-start">
+    <PageShell
+      hero={{
+        eyebrow: "Leren",
+        title: "Kennisbank",
+        description:
+          "Uitleg over scam-vormen die in Nederland veel voorkomen: hoe ze werken, welke signalen je moet zien en wat je kunt doen als het misgaat.",
+        media: MEDIA.knowledge,
+      }}
+    >
+      <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2 md:max-w-none md:justify-start">
         <Link
           href="/kennisbank"
           className={`rounded-md px-3 py-1.5 text-sm transition ${

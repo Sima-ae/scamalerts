@@ -1,12 +1,15 @@
 import { BRAND_NAME } from "@/lib/brand";
+import { PageShell } from "@/components/ui/page-shell";
 
 export const metadata = { title: "Contentrichtlijnen" };
 
 export default function ContentGuidelinesPage() {
   return (
-    <div className="section-shell prose-page py-14 md:py-16">
-      <h1 className="font-display text-4xl text-ink">Contentrichtlijnen</h1>
-      <p className="mt-4 text-muted">
+    <PageShell
+      narrow
+      hero={{ eyebrow: "Community", title: "Contentrichtlijnen" }}
+    >
+      <p className="text-muted">
         Zo houden we {BRAND_NAME} bruikbaar en veilig voor iedereen:
       </p>
       <ul className="mt-6 list-disc space-y-3 pl-5 text-muted">
@@ -28,6 +31,6 @@ export default function ContentGuidelinesPage() {
           openbare velden.
         </li>
       </ul>
-    </div>
+    </PageShell>
   );
 }

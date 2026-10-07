@@ -1,14 +1,15 @@
 import { BRAND_NAME, BRAND_DOMAIN } from "@/lib/brand";
+import { PageShell } from "@/components/ui/page-shell";
 
 export const metadata = { title: "Privacy" };
 
 export default function PrivacyPage() {
   return (
-    <div className="section-shell prose-page py-14 md:py-16">
-      <h1 className="font-display text-4xl text-ink">
-        Privacyverklaring (AVG)
-      </h1>
-      <div className="mt-6 space-y-4 leading-relaxed text-muted">
+    <PageShell
+      narrow
+      hero={{ eyebrow: "Juridisch", title: "Privacyverklaring (AVG)" }}
+    >
+      <div className="space-y-4 leading-relaxed text-muted">
         <p>
           {BRAND_NAME} ({BRAND_DOMAIN}) verwerkt persoonsgegevens alleen voor
           accountbeheer, scam-meldingen, moderatie, beveiliging en het
@@ -31,6 +32,6 @@ export default function PrivacyPage() {
           bijgewerkt; de meest recente versie staat altijd op deze pagina.
         </p>
       </div>
-    </div>
+    </PageShell>
   );
 }

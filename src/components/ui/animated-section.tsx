@@ -1,7 +1,38 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+
+/**
+ * Scroll reveal that degrades to visible content: elements are only hidden
+ * once `html.js` is set, and are revealed by IntersectionObserver.
+ */
+function useReveal<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      el.classList.add("is-visible");
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return ref;
+}
 
 export function AnimatedSection({
   children,
@@ -12,18 +43,15 @@ export function AnimatedSection({
   className?: string;
   delay?: number;
 }) {
-  const reduce = useReducedMotion();
-
+  const ref = useReveal<HTMLElement>();
   return (
-    <motion.section
-      className={className}
-      initial={reduce ? false : { opacity: 0, y: 28 }}
-      whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.18 }}
-      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay }}
+    <section
+      ref={ref}
+      className={`reveal ${className}`}
+      style={{ "--reveal-delay": `${delay}s` } as CSSProperties}
     >
       {children}
-    </motion.section>
+    </section>
   );
 }
 
@@ -36,17 +64,14 @@ export function AnimatedItem({
   className?: string;
   delay?: number;
 }) {
-  const reduce = useReducedMotion();
-
+  const ref = useReveal<HTMLDivElement>();
   return (
-    <motion.div
-      className={className}
-      initial={reduce ? false : { opacity: 0, y: 18 }}
-      whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay }}
+    <div
+      ref={ref}
+      className={`reveal reveal-item ${className}`}
+      style={{ "--reveal-delay": `${delay}s` } as CSSProperties}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }

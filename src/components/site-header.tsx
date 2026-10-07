@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { BRAND_NAME } from "@/lib/brand";
 import { MobileNav } from "@/components/mobile-nav";
+import { HeaderFrame } from "@/components/header-frame";
 
 const links = [
   { href: "/controleren", label: "Controleren" },
@@ -15,7 +16,7 @@ export async function SiteHeader() {
   const session = await auth();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line/70 bg-[color-mix(in_oklab,var(--background)_82%,white)] backdrop-blur-xl">
+    <HeaderFrame>
       <div className="section-shell flex items-center justify-between gap-3 py-3.5 md:gap-6 md:py-4">
         <Link href="/" className="min-w-0 shrink-0">
           <span className="font-display text-[1.65rem] tracking-tight text-ink md:text-[1.85rem]">
@@ -67,6 +68,6 @@ export async function SiteHeader() {
           <MobileNav links={links} />
         </div>
       </div>
-    </header>
+    </HeaderFrame>
   );
 }

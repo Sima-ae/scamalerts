@@ -2,7 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatDateNL } from "@/lib/utils";
 import { trustLabelNL } from "@/lib/trust-score";
-import { PageShell, PageHero } from "@/components/ui/page-shell";
+import { PageShell } from "@/components/ui/page-shell";
+import { MEDIA } from "@/lib/media";
 import { AnimatedItem } from "@/components/ui/animated-section";
 
 export const dynamic = "force-dynamic";
@@ -34,14 +35,16 @@ export default async function MeldingenPage({
   }).catch(() => []);
 
   return (
-    <PageShell>
-      <PageHero
-        eyebrow="Community"
-        title="Scam-meldingen"
-        description="Gemodereerde ervaringen van gebruikers. Gebruik filters of controleer een specifiek domein via Controleren."
-      />
-
-      <div className="mx-auto mt-10 flex max-w-4xl flex-wrap justify-center gap-2 md:max-w-none md:justify-start">
+    <PageShell
+      hero={{
+        eyebrow: "Community",
+        title: "Scam-meldingen",
+        description:
+          "Gemodereerde ervaringen van gebruikers. Gebruik filters of controleer een specifiek domein via Controleren.",
+        media: MEDIA.community,
+      }}
+    >
+      <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2 md:max-w-none md:justify-start">
         <Link
           href="/meldingen"
           className={`rounded-md px-3 py-1.5 text-sm transition ${

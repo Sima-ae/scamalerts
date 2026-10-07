@@ -2,14 +2,15 @@ import Link from "next/link";
 import { DomainSearch } from "@/components/domain-search";
 import { MediaFrame } from "@/components/ui/media-frame";
 import { AnimatedSection, AnimatedItem } from "@/components/ui/animated-section";
+import { TopicMarquee } from "@/components/home/topic-marquee";
+import { ResultPreview } from "@/components/home/result-preview";
+import { SplitFeature } from "@/components/home/split-feature";
 import { prisma } from "@/lib/prisma";
 import { formatDateNL } from "@/lib/utils";
 import { trustLabelNL } from "@/lib/trust-score";
 import { BRAND_NAME } from "@/lib/brand";
+import { MEDIA } from "@/lib/media";
 import {
-  ShieldCheck,
-  Megaphone,
-  BookOpen,
   ShoppingBag,
   Landmark,
   Briefcase,
@@ -17,6 +18,9 @@ import {
   TrendingUp,
   Clapperboard,
   ArrowRight,
+  Link2,
+  ScanSearch,
+  Gauge,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +48,7 @@ const topics = [
     href: "/kennisbank?onderwerp=romantiek",
     icon: Heart,
     title: "Dating & romantiek",
-    text: "Emotionele druk, plotselinge geldvragen en profiles die niet kloppen.",
+    text: "Emotionele druk, plotselinge geldvragen en profielen die niet kloppen.",
   },
   {
     href: "/kennisbank?onderwerp=investeringen-crypto",
@@ -57,6 +61,24 @@ const topics = [
     icon: Clapperboard,
     title: "Meer onderwerpen",
     text: "Van Marktplaats tot DigiD-nabootsing: alle gidsen op één plek.",
+  },
+];
+
+const steps = [
+  {
+    icon: Link2,
+    title: "Plak een link",
+    text: "Een domein, volledige URL of link uit een sms of mail.",
+  },
+  {
+    icon: ScanSearch,
+    title: "Wij onderzoeken",
+    text: "DNS, TLS, domeinleeftijd, HTTPS-gedrag, nabootsing en meldingen.",
+  },
+  {
+    icon: Gauge,
+    title: "Heldere Trust Score",
+    text: "Een score van 1–100 met uitleg per signaal, zonder vakjargon.",
   },
 ];
 
@@ -85,31 +107,24 @@ export default async function HomePage() {
 
   return (
     <div className="w-full">
-      {/* Hero — brand first, one composition, full-bleed media */}
       <section className="hero-plane relative w-full">
-        <MediaFrame
-          src="/media/hero-trust.jpg"
-          alt=""
-          priority
-          overlay="ink"
-          /* videoSrc="/media/hero-trust.mp4" — drop a muted loop here later */
-        />
-        <div className="section-shell relative z-10 flex min-h-[min(92vh,920px)] flex-col justify-center py-20 md:py-28">
-          <div className="mx-auto w-full max-w-4xl text-center md:mx-0 md:max-w-3xl md:text-left">
+        <MediaFrame media={MEDIA.hero} priority overlay="ink" />
+        <div className="section-shell relative z-10 grid min-h-[min(92vh,920px)] items-center gap-12 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+          <div className="mx-auto w-full max-w-3xl text-center lg:mx-0 lg:text-left">
             <h1 className="animate-rise font-display text-[clamp(3.25rem,10vw,6.5rem)] leading-[0.92] tracking-tight text-white">
               {BRAND_NAME}
             </h1>
-            <p className="animate-rise-delay mx-auto mt-6 max-w-xl text-xl font-medium text-white md:mx-0 md:text-2xl">
+            <p className="animate-rise-delay mx-auto mt-6 max-w-xl text-xl font-medium text-white md:text-2xl lg:mx-0">
               Weet je zeker dat die website te vertrouwen is?
             </p>
-            <p className="animate-rise-delay mx-auto mt-3 max-w-lg text-base leading-relaxed text-white/75 md:mx-0 md:text-lg">
+            <p className="animate-rise-delay mx-auto mt-3 max-w-lg text-base leading-relaxed text-white/75 md:text-lg lg:mx-0">
               Check een domein in seconden, deel wat je meemaakt en lees hoe
               Nederlandse scams écht werken.
             </p>
-            <div className="animate-rise-late mx-auto mt-10 max-w-2xl md:mx-0">
+            <div className="animate-rise-late mx-auto mt-10 flex max-w-2xl justify-center lg:mx-0 lg:justify-start">
               <DomainSearch large variant="hero" />
             </div>
-            <div className="animate-rise-late mt-6 flex flex-wrap items-center justify-center gap-3 md:justify-start">
+            <div className="animate-rise-late mt-6 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
               <Link href="/melden" className="btn-primary">
                 Scam melden
               </Link>
@@ -118,46 +133,57 @@ export default async function HomePage() {
               </Link>
             </div>
           </div>
+          <div className="animate-rise-late hidden justify-end lg:flex">
+            <ResultPreview />
+          </div>
         </div>
       </section>
 
-      {/* Value props — motion on scroll */}
+      <TopicMarquee />
+
       <AnimatedSection className="section-band relative py-16 md:py-24">
         <div className="ambient-wash pointer-events-none absolute inset-0" aria-hidden />
         <div className="section-shell relative z-10">
-          <div className="mx-auto grid max-w-5xl gap-12 text-center sm:grid-cols-3 sm:gap-8 sm:text-left lg:max-w-none lg:gap-14">
-            {[
-              {
-                icon: ShieldCheck,
-                title: "Trust Score",
-                text: "Een leesbare score op basis van technische signalen, nabootsingspatronen en goedgekeurde meldingen.",
-              },
-              {
-                icon: Megaphone,
-                title: "Meldingen uit NL",
-                text: "Actuele rapporten over Tikkie, Marktplaats, bankphishing, nepwebshops en meer.",
-              },
-              {
-                icon: BookOpen,
-                title: "Kennisbank",
-                text: "Uitleg met rode vlaggen en herstelstappen — geen dunne SEO-pagina’s, wel bruikbare context.",
-              },
-            ].map((item, i) => (
-              <AnimatedItem key={item.title} delay={i * 0.08}>
-                <item.icon className="mx-auto h-7 w-7 text-accent sm:mx-0" />
-                <h2 className="font-display mt-4 text-2xl text-ink md:text-3xl">
-                  {item.title}
-                </h2>
-                <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted sm:mx-0 sm:max-w-none md:text-base">
-                  {item.text}
-                </p>
-              </AnimatedItem>
-            ))}
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+              Hoe het werkt
+            </p>
+            <h2 className="font-display mt-2 text-3xl text-ink md:text-4xl lg:text-5xl">
+              Van twijfel naar duidelijkheid in drie stappen
+            </h2>
+          </div>
+          <div className="relative mx-auto mt-14 max-w-5xl">
+            <div
+              className="step-line absolute left-[16.66%] right-[16.66%] top-7 hidden h-px bg-linear-to-r from-accent/60 via-line to-trust/60 md:block"
+              aria-hidden
+            />
+            <ol className="relative grid gap-12 md:grid-cols-3 md:gap-8">
+              {steps.map((step, i) => (
+                <li key={step.title}>
+                  <AnimatedItem
+                    delay={i * 0.12}
+                    className="flex flex-col items-center text-center"
+                  >
+                    <span className="relative flex h-14 w-14 items-center justify-center rounded-full border border-line bg-white text-accent shadow-[0_12px_30px_-20px_rgba(15,28,46,0.5)]">
+                      <step.icon className="h-6 w-6" />
+                      <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-ink text-[11px] font-semibold text-white">
+                        {i + 1}
+                      </span>
+                    </span>
+                    <h3 className="font-display mt-5 text-2xl text-ink">
+                      {step.title}
+                    </h3>
+                    <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted md:text-base">
+                      {step.text}
+                    </p>
+                  </AnimatedItem>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
       </AnimatedSection>
 
-      {/* Reports */}
       <AnimatedSection className="section-band section-band--surface">
         <div className="section-shell py-16 md:py-24">
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center md:mx-0 md:max-w-none md:flex-row md:items-end md:justify-between md:text-left">
@@ -171,78 +197,117 @@ export default async function HomePage() {
             </div>
             <Link
               href="/meldingen"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent transition hover:gap-2.5"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent transition-all hover:gap-2.5"
             >
               Alles bekijken
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
 
-          <div className="mx-auto mt-10 max-w-3xl divide-y divide-line md:mx-0 md:max-w-none">
-            {reports.length === 0 && (
-              <p className="py-10 text-center text-muted md:text-left">
-                Nog geen goedgekeurde meldingen. Wees de eerste om te melden.
-              </p>
-            )}
-            {reports.map((report, i) => (
-              <AnimatedItem key={report.id} delay={Math.min(i, 4) * 0.05}>
-                <article className="interactive-row grid gap-3 rounded-lg px-2 py-6 md:grid-cols-[1fr_auto] md:items-start md:px-4">
-                  <div className="text-center md:text-left">
+          {reports.length === 0 ? (
+            <p className="mt-10 rounded-xl border border-dashed border-line bg-white/60 px-6 py-12 text-center text-muted">
+              Nog geen goedgekeurde meldingen. Wees de eerste om te melden.
+            </p>
+          ) : (
+            <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {reports.map((report, i) => (
+                <AnimatedItem key={report.id} delay={Math.min(i, 5) * 0.05}>
+                  <article className="flex h-full flex-col rounded-xl border border-line bg-white/80 p-5 text-center transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-[0_20px_40px_-30px_rgba(15,28,46,0.45)] md:text-left">
                     <p className="text-xs text-muted">
-                      {report.publishedAt
-                        ? formatDateNL(report.publishedAt)
-                        : formatDateNL(report.createdAt)}
+                      {formatDateNL(report.publishedAt ?? report.createdAt)}
                       {report.category ? ` · ${report.category.name}` : ""}
                     </p>
-                    <h3 className="mt-1 text-lg font-semibold text-ink md:text-xl">
+                    <h3 className="mt-2 text-lg font-semibold text-ink">
                       {report.title}
                     </h3>
-                    <p className="mx-auto mt-2 line-clamp-2 max-w-3xl text-sm leading-relaxed text-muted md:mx-0">
+                    <p className="mt-2 line-clamp-3 flex-1 text-sm leading-relaxed text-muted">
                       {report.description}
                     </p>
-                  </div>
-                  <div className="text-center md:text-right">
-                    <p className="text-sm font-semibold text-ink">
-                      {report.domain?.domain ?? report.identifierValue ?? "—"}
-                    </p>
-                    {report.domain && (
-                      <p className="mt-1 text-sm text-accent">
-                        {trustLabelNL(report.domain.trustLabel)}
-                      </p>
-                    )}
-                  </div>
-                </article>
-              </AnimatedItem>
-            ))}
-          </div>
+                    <div className="mt-4 flex flex-wrap items-center justify-center gap-x-2 border-t border-line pt-3 text-sm md:justify-between">
+                      <span className="font-semibold text-ink">
+                        {report.domain?.domain ?? report.identifierValue ?? "—"}
+                      </span>
+                      {report.domain && (
+                        <span className="text-accent">
+                          {trustLabelNL(report.domain.trustLabel)}
+                        </span>
+                      )}
+                    </div>
+                  </article>
+                </AnimatedItem>
+              ))}
+            </div>
+          )}
         </div>
       </AnimatedSection>
 
-      {/* Topics */}
+      <section className="section-band relative py-16 md:py-24">
+        <div className="section-shell relative z-10">
+          <SplitFeature
+            eyebrow="Melden"
+            title="Jouw ervaring waarschuwt de volgende"
+            text="Kreeg je een verdacht sms’je, betaalverzoek of webshop-link? Meld het in een paar minuten. Elke melding wordt eerst gemodereerd en helpt de Trust Score van dat domein scherper te maken."
+            media={MEDIA.community}
+            href="/melden"
+            cta="Scam melden"
+          />
+        </div>
+      </section>
+
+      <AnimatedSection className="section-band section-band--media relative">
+        <MediaFrame media={MEDIA.signals} overlay="ink" />
+        <div className="section-shell relative z-10 flex min-h-90 items-center justify-between gap-10 py-16 md:min-h-110 md:py-24">
+          <div className="mx-auto max-w-2xl text-center lg:mx-0 lg:text-left">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/55">
+              Signalen die tellen
+            </p>
+            <h2 className="font-display mt-3 text-3xl text-white md:text-4xl lg:text-5xl">
+              DNS, TLS, leeftijd, nabootsing — in één overzicht
+            </h2>
+            <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-white/75 lg:mx-0">
+              Geen magische knop: wel een heldere uitleg van wat we meten en wat
+              dat voor jou betekent vóór je iets betaalt of deelt.
+            </p>
+            <Link href="/controleren" className="btn-primary mt-8 inline-flex">
+              Start een check
+            </Link>
+          </div>
+          <div
+            className="signal-graphic float-soft hidden h-56 w-56 shrink-0 rounded-full lg:block xl:h-64 xl:w-64"
+            aria-hidden
+          />
+        </div>
+      </AnimatedSection>
+
       <AnimatedSection className="section-band relative py-16 md:py-24">
         <div className="ambient-wash pointer-events-none absolute inset-0" aria-hidden />
         <div className="section-shell relative z-10">
-          <div className="mx-auto max-w-2xl text-center md:mx-0 md:max-w-3xl md:text-left">
+          <div className="mx-auto max-w-2xl text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
               Onderwerpen
             </p>
             <h2 className="font-display mt-2 text-3xl text-ink md:text-4xl lg:text-5xl">
               Leer hoe scams in verschillende hoeken werken
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-muted md:mx-0">
+            <p className="mx-auto mt-3 max-w-xl text-muted">
               Van nepwebshops tot valse vacatures: dezelfde druktechnieken, andere
               verpakking. Kies een thema en lees de signalen.
             </p>
           </div>
-          <div className="mx-auto mt-12 grid max-w-lg gap-x-10 gap-y-10 sm:max-w-none sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mx-auto mt-12 grid max-w-lg gap-4 sm:max-w-none sm:grid-cols-2 lg:grid-cols-3">
             {topics.map((topic, i) => (
               <AnimatedItem key={topic.title} delay={i * 0.05}>
-                <Link href={topic.href} className="topic-link group text-center sm:text-left">
-                  <topic.icon className="mx-auto h-5 w-5 text-ink/70 transition group-hover:text-accent sm:mx-0" />
-                  <h3 className="font-display mt-3 text-xl text-ink transition group-hover:text-accent">
+                <Link
+                  href={topic.href}
+                  className="group flex h-full flex-col items-center rounded-xl border border-line bg-white/70 p-6 text-center transition hover:-translate-y-0.5 hover:border-accent/40 hover:bg-white sm:items-start sm:text-left"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-soft text-accent transition group-hover:bg-accent group-hover:text-white">
+                    <topic.icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="font-display mt-4 text-xl text-ink">
                     {topic.title}
                   </h3>
-                  <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted sm:mx-0 sm:max-w-none">
+                  <p className="mt-2 text-sm leading-relaxed text-muted">
                     {topic.text}
                   </p>
                 </Link>
@@ -252,98 +317,58 @@ export default async function HomePage() {
         </div>
       </AnimatedSection>
 
-      {/* Media band — photo now, video-ready later */}
-      <AnimatedSection className="section-band section-band--media relative min-h-[320px] md:min-h-[420px]">
-        <MediaFrame
-          src="/media/section-signal.jpg"
-          alt=""
-          overlay="ink"
-          /* videoSrc="/media/section-signal.mp4" */
-        />
-        <div className="section-shell relative z-10 flex min-h-[320px] items-center py-16 md:min-h-[420px] md:py-24">
-          <div className="mx-auto max-w-2xl text-center md:mx-0 md:text-left">
+      <section className="section-band section-band--surface py-16 md:py-24">
+        <div className="section-shell">
+          <SplitFeature
+            eyebrow="Kennisbank"
+            title="Dieper lezen, beter herkennen"
+            text="Praktische gidsen met rode vlaggen, echte voorbeelden en herstelstappen als het toch misgaat."
+            media={MEDIA.knowledge}
+            href="/kennisbank"
+            cta="Naar de kennisbank"
+            reverse
+          >
+            {articles.length > 0 && (
+              <ul className="mt-6 divide-y divide-line border-y border-line text-left">
+                {articles.map((article) => (
+                  <li key={article.id}>
+                    <Link
+                      href={`/kennisbank/${article.slug}`}
+                      className="group flex items-center justify-between gap-4 py-3.5"
+                    >
+                      <span className="font-semibold text-ink transition group-hover:text-accent">
+                        {article.title}
+                      </span>
+                      <ArrowRight className="h-4 w-4 shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-accent" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SplitFeature>
+        </div>
+      </section>
+
+      <AnimatedSection className="section-band section-band--media relative">
+        <MediaFrame media={MEDIA.business} overlay="ink" />
+        <div className="section-shell relative z-10 flex min-h-95 items-center py-16 md:min-h-115 md:py-24">
+          <div className="mx-auto max-w-2xl text-center lg:mx-0 lg:text-left">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/55">
-              Signalen die tellen
+              Zakelijk
             </p>
             <h2 className="font-display mt-3 text-3xl text-white md:text-4xl lg:text-5xl">
-              DNS, TLS, leeftijd, nabootsing — in één overzicht
+              Bedrijf of merk? Claim je profiel
             </h2>
-            <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-white/75 md:mx-0">
-              Geen magische knop: wel een heldere uitleg van wat we meten en wat
-              dat voor jou betekent vóór je iets betaalt of deelt.
+            <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-white/75 lg:mx-0">
+              Laat zien dat jullie bereikbaar zijn voor vragen over misbruik van
+              jullie naam. Claimen verandert geen Trust Score — transparantie wel.
             </p>
-            <Link
-              href="/controleren"
-              className="btn-primary mt-8 inline-flex"
-            >
-              Start een check
-            </Link>
-          </div>
-          <div
-            className="signal-graphic float-soft ml-auto hidden h-56 w-56 lg:block xl:h-64 xl:w-64"
-            aria-hidden
-          />
-        </div>
-      </AnimatedSection>
-
-      {/* Knowledge */}
-      <AnimatedSection className="section-band section-band--surface">
-        <div className="section-shell py-16 md:py-24">
-          <div className="mx-auto max-w-2xl text-center md:mx-0 md:text-left">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
-              Kennisbank
-            </p>
-            <h2 className="font-display mt-2 text-3xl text-ink md:text-4xl lg:text-5xl">
-              Dieper lezen, beter herkennen
-            </h2>
-          </div>
-          <div className="mx-auto mt-12 grid max-w-lg gap-10 sm:max-w-none md:grid-cols-3 md:gap-8">
-            {articles.map((article, i) => (
-              <AnimatedItem key={article.id} delay={i * 0.08}>
-                <Link
-                  href={`/kennisbank/${article.slug}`}
-                  className="topic-link group block text-center md:text-left"
-                >
-                  <h3 className="font-display text-xl text-ink transition group-hover:text-accent md:text-2xl">
-                    {article.title}
-                  </h3>
-                  <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted md:mx-0">
-                    {article.excerpt}
-                  </p>
-                </Link>
-              </AnimatedItem>
-            ))}
-            {articles.length === 0 && (
-              <p className="text-center text-muted md:col-span-3 md:text-left">
-                Artikelen worden binnenkort toegevoegd.
-              </p>
-            )}
-          </div>
-          <div className="mt-12 flex justify-center md:justify-start">
-            <Link href="/kennisbank" className="btn-ink text-sm">
-              Naar de kennisbank
-            </Link>
-          </div>
-        </div>
-      </AnimatedSection>
-
-      {/* Business CTA */}
-      <AnimatedSection className="section-band relative py-16 md:py-24">
-        <div className="ambient-wash pointer-events-none absolute inset-0" aria-hidden />
-        <div className="section-shell relative z-10">
-          <div className="mx-auto grid max-w-3xl items-center gap-8 text-center md:max-w-none md:grid-cols-[1.3fr_0.7fr] md:text-left">
-            <div>
-              <h2 className="font-display text-3xl text-ink md:text-4xl lg:text-5xl">
-                Bedrijf of merk? Claim je profiel
-              </h2>
-              <p className="mx-auto mt-4 max-w-xl text-muted md:mx-0">
-                Laat zien dat jullie bereikbaar zijn voor vragen over misbruik van
-                jullie naam. Claimen verandert geen Trust Score — transparantie wel.
-              </p>
-            </div>
-            <div className="flex justify-center md:justify-end">
+            <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
               <Link href="/zakelijk" className="btn-primary">
                 Meer over zakelijk
+              </Link>
+              <Link href="/zakelijk/claimen" className="btn-secondary">
+                Domein claimen
               </Link>
             </div>
           </div>

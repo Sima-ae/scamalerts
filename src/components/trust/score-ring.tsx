@@ -25,13 +25,17 @@ export function ScoreRing({
   score,
   label,
   tone = "neutral",
+  size = "md",
 }: {
   score: number;
   label: string;
   tone?: "good" | "warn" | "bad" | "neutral";
+  size?: "sm" | "md";
 }) {
+  const small = size === "sm";
   const reduce = useReducedMotion();
-  const [value, setValue] = useState(reduce ? score : 0);
+  const [animated, setAnimated] = useState(0);
+  const value = reduce ? score : animated;
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.max(0, Math.min(100, value));
@@ -48,17 +52,18 @@ export function ScoreRing({
           : "var(--accent)";
 
   useEffect(() => {
-    if (reduce) {
-      setValue(score);
-      return;
-    }
-    const id = requestAnimationFrame(() => setValue(score));
+    if (reduce) return;
+    const id = requestAnimationFrame(() => setAnimated(score));
     return () => cancelAnimationFrame(id);
   }, [score, reduce]);
 
   return (
     <div
-      className="relative mx-auto flex h-[152px] w-[152px] items-center justify-center md:mx-0 md:h-[168px] md:w-[168px]"
+      className={`relative flex shrink-0 items-center justify-center ${
+        small
+          ? "h-26 w-26"
+          : "mx-auto h-38 w-38 md:mx-0 md:h-42 md:w-42"
+      }`}
       role="img"
       aria-label={`Trust Score ${Math.round(clamped)}: ${label}`}
     >
@@ -98,12 +103,18 @@ export function ScoreRing({
         aria-hidden
       >
         <span
-          className="font-display text-[2.35rem] leading-none tracking-tight md:text-[2.75rem]"
+          className={`font-display leading-none tracking-tight ${
+            small ? "text-[1.75rem]" : "text-[2.35rem] md:text-[2.75rem]"
+          }`}
           style={{ color: stroke }}
         >
           {Math.round(clamped)}
         </span>
-        <span className="mt-1.5 max-w-full text-[0.62rem] font-semibold leading-[1.15] tracking-wide text-muted md:text-[0.68rem]">
+        <span
+          className={`mt-1 max-w-full font-semibold leading-[1.15] tracking-wide text-muted ${
+            small ? "text-[0.55rem]" : "text-[0.62rem] md:text-[0.68rem]"
+          }`}
+        >
           {lines.map((line) => (
             <span key={line} className="block">
               {line}

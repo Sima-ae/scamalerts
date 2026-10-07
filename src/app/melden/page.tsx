@@ -1,6 +1,7 @@
 import { ReportForm } from "@/components/report-form";
 import { prisma } from "@/lib/prisma";
-import { PageShell, PageHero } from "@/components/ui/page-shell";
+import { PageShell } from "@/components/ui/page-shell";
+import { MEDIA } from "@/lib/media";
 
 export const dynamic = "force-dynamic";
 
@@ -21,13 +22,16 @@ export default async function MeldenPage({
   }).catch(() => []);
 
   return (
-    <PageShell>
-      <PageHero
-        eyebrow="Melden"
-        title="Meld een scam"
-        description="Deel wat je hebt meegemaakt zodat anderen eerder doorhebben wat er speelt. Een account is niet verplicht; wel moderatie voordat iets openbaar wordt. Beschrijf feiten die je veilig kunt delen."
-      />
-      <div className="mx-auto mt-10 max-w-2xl">
+    <PageShell
+      hero={{
+        eyebrow: "Melden",
+        title: "Meld een scam",
+        description:
+          "Deel wat je hebt meegemaakt zodat anderen eerder doorhebben wat er speelt. Een account is niet verplicht; wel moderatie voordat iets openbaar wordt.",
+        media: MEDIA.community,
+      }}
+    >
+      <div className="mx-auto max-w-2xl">
         <ReportForm
           categories={categories}
           initialDomain={sp.domain ?? ""}

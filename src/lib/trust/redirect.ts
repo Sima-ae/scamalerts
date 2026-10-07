@@ -29,7 +29,7 @@ function follow(startUrl: string, timeoutMs: number): Promise<string | null> {
 
     const timer = setTimeout(() => done(null), timeoutMs);
     let hops = 0;
-    let current = startUrl;
+    const current = startUrl;
 
     const step = (url: string) => {
       hops += 1;
