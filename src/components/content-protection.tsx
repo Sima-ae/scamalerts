@@ -103,13 +103,10 @@ export function ContentProtection() {
       }}
     >
       <div
-        className="pointer-events-none select-none rounded-md bg-white px-8 py-5 text-center shadow-2xl"
+        className="pointer-events-none select-none rounded-md bg-white px-5 py-2.5 text-center shadow-2xl"
         style={{ zIndex: 2147483647 }}
       >
-        <p className="font-display text-xl tracking-tight text-ink md:text-2xl">
-          {line}
-        </p>
-        <p className="mt-2 text-xs text-muted">Alle rechten voorbehouden.</p>
+        <p className="text-sm font-semibold tracking-tight text-ink">{line}</p>
       </div>
     </div>
   );
