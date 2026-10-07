@@ -45,10 +45,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="nl" className="h-full antialiased">
-      <body className="content-protect flex min-h-full flex-col bg-background font-sans text-foreground">
+      <body className="content-protect flex min-h-full flex-col overflow-x-hidden bg-background font-sans text-foreground">
         <Providers>
           <SiteHeader />
-          <main className="flex-1">{children}</main>
+          <main className="w-full flex-1">{children}</main>
           <SiteFooter />
           <ContentProtection />
         </Providers>

@@ -107,25 +107,29 @@ export default async function DomainResultPage({
       : null;
 
   return (
-    <div className="section-shell py-12 md:py-16">
-      <DomainSearch initial={domain} />
+    <div className="relative overflow-hidden">
+      <div className="ambient-wash pointer-events-none absolute inset-0" aria-hidden />
+      <div className="section-shell relative z-10 py-12 md:py-16">
+      <div className="mx-auto max-w-2xl md:mx-0 md:max-w-xl">
+        <DomainSearch initial={domain} />
+      </div>
 
       {dbUnavailable && (
-        <p className="mt-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <p className="mx-auto mt-6 max-w-2xl rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm text-amber-900 md:mx-0 md:text-left">
           Database/opslag tijdelijk niet beschikbaar. Je ziet wel de technische
           analyse; scores en meldingen worden mogelijk niet bewaard.
         </p>
       )}
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[280px_1fr]">
-        <aside className="h-fit border border-line bg-white px-8 py-10 lg:sticky lg:top-24">
+        <aside className="mx-auto h-fit w-full max-w-sm border border-line bg-white/90 px-8 py-10 text-center backdrop-blur-sm lg:mx-0 lg:sticky lg:top-24 lg:text-left">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
             Trust Score
           </p>
           <p className={`mt-3 text-6xl font-semibold ${scoreColor}`}>
             {analysis.score}
           </p>
-          <p className="mt-2 text-center text-sm font-medium text-ink lg:text-left">
+          <p className="mt-2 text-sm font-medium text-ink">
             {trustLabelNL(analysis.label)}
           </p>
           <dl className="mt-8 space-y-3 border-t border-line pt-6 text-sm">
@@ -155,11 +159,11 @@ export default async function DomainResultPage({
           </Link>
         </aside>
 
-        <div>
-          <h1 className="font-display text-3xl text-ink md:text-4xl">
+        <div className="min-w-0 text-center lg:text-left">
+          <h1 className="font-display break-all text-3xl text-ink md:text-4xl lg:text-5xl">
             {domain}
           </h1>
-          <p className="mt-3 max-w-2xl text-muted">
+          <p className="mx-auto mt-3 max-w-2xl text-muted lg:mx-0">
             Analyse via {BRAND_NAME}: DNS, TLS, RDAP-leeftijd, HTTPS-gedrag,
             typosquat/lookalike-detectie en community-meldingen. Informatief —
             geen juridisch oordeel.
@@ -217,7 +221,7 @@ export default async function DomainResultPage({
             </div>
           )}
 
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
             <Link
               href={`/melden?domain=${encodeURIComponent(domain)}`}
               className="btn-primary text-sm"
@@ -226,7 +230,7 @@ export default async function DomainResultPage({
             </Link>
             <Link
               href="/zakelijk/claimen"
-              className="rounded-md border border-line bg-white px-4 py-2 text-sm font-medium text-ink hover:bg-surface"
+              className="rounded-md border border-line bg-white px-4 py-2 text-sm font-medium text-ink transition hover:bg-surface"
             >
               Bedrijf claimen
             </Link>
@@ -304,6 +308,7 @@ export default async function DomainResultPage({
             </ul>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

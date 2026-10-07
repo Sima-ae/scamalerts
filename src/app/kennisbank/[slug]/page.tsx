@@ -36,25 +36,31 @@ export default async function ArticlePage({
   if (!article || article.status !== "PUBLISHED") notFound();
 
   return (
-    <article className="section-shell prose-page py-14 md:py-16">
-      <p className="text-xs text-muted">
-        {article.publishedAt ? formatDateNL(article.publishedAt) : ""}
-        {article.category ? ` · ${article.category.name}` : ""}
-      </p>
-      <h1 className="font-display mt-3 text-4xl text-ink md:text-5xl">
-        {article.title}
-      </h1>
-      {article.excerpt && (
-        <p className="mt-4 text-lg text-muted">{article.excerpt}</p>
-      )}
-      <div className="mt-10 space-y-4 whitespace-pre-wrap leading-relaxed text-ink/90">
-        {article.content}
-      </div>
-      <div className="mt-12 border-t border-line pt-6">
-        <Link href="/kennisbank" className="text-sm font-semibold text-accent hover:underline">
-          ← Terug naar kennisbank
-        </Link>
-      </div>
-    </article>
+    <div className="relative overflow-hidden">
+      <div className="ambient-wash pointer-events-none absolute inset-0" aria-hidden />
+      <article className="section-shell prose-page relative z-10 mx-auto py-14 text-center md:py-16 md:text-left">
+        <p className="text-xs text-muted">
+          {article.publishedAt ? formatDateNL(article.publishedAt) : ""}
+          {article.category ? ` · ${article.category.name}` : ""}
+        </p>
+        <h1 className="font-display mt-3 text-4xl text-ink md:text-5xl">
+          {article.title}
+        </h1>
+        {article.excerpt && (
+          <p className="mt-4 text-lg text-muted">{article.excerpt}</p>
+        )}
+        <div className="mt-10 space-y-4 whitespace-pre-wrap text-left leading-relaxed text-ink/90">
+          {article.content}
+        </div>
+        <div className="mt-12 border-t border-line pt-6">
+          <Link
+            href="/kennisbank"
+            className="text-sm font-semibold text-accent hover:underline"
+          >
+            ← Terug naar kennisbank
+          </Link>
+        </div>
+      </article>
+    </div>
   );
 }

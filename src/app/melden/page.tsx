@@ -1,5 +1,6 @@
 import { ReportForm } from "@/components/report-form";
 import { prisma } from "@/lib/prisma";
+import { PageShell, PageHero } from "@/components/ui/page-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -17,24 +18,21 @@ export default async function MeldenPage({
   const sp = await searchParams;
   const categories = await prisma.category.findMany({
     orderBy: { name: "asc" },
-  });
+  }).catch(() => []);
 
   return (
-    <div className="section-shell py-14 md:py-16">
-      <h1 className="font-display text-4xl text-ink md:text-5xl">
-        Meld een scam
-      </h1>
-      <p className="mt-4 max-w-2xl text-muted">
-        Deel wat je hebt meegemaakt zodat anderen eerder doorhebben wat er
-        speelt. Een account is niet verplicht; wel moderatie voordat iets
-        openbaar wordt. Beschrijf feiten die je veilig kunt delen.
-      </p>
-      <div className="mt-10">
+    <PageShell>
+      <PageHero
+        eyebrow="Melden"
+        title="Meld een scam"
+        description="Deel wat je hebt meegemaakt zodat anderen eerder doorhebben wat er speelt. Een account is niet verplicht; wel moderatie voordat iets openbaar wordt. Beschrijf feiten die je veilig kunt delen."
+      />
+      <div className="mx-auto mt-10 max-w-2xl">
         <ReportForm
           categories={categories}
           initialDomain={sp.domain ?? ""}
         />
       </div>
-    </div>
+    </PageShell>
   );
 }

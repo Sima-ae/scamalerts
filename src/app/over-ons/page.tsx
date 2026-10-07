@@ -1,4 +1,5 @@
 import { BRAND_NAME, BRAND_DOMAIN } from "@/lib/brand";
+import { PageShell, PageHero } from "@/components/ui/page-shell";
 
 export const metadata = {
   title: "Over ons",
@@ -7,11 +8,9 @@ export const metadata = {
 
 export default function OverOnsPage() {
   return (
-    <div className="section-shell prose-page py-14 md:py-16">
-      <h1 className="font-display text-4xl text-ink md:text-5xl">
-        Over {BRAND_NAME}
-      </h1>
-      <div className="mt-6 space-y-4 leading-relaxed text-muted">
+    <PageShell>
+      <PageHero eyebrow="Platform" title={`Over ${BRAND_NAME}`} />
+      <div className="prose-page mx-auto mt-10 space-y-4 text-center leading-relaxed text-muted md:text-left">
         <p>
           {BRAND_NAME} ({BRAND_DOMAIN}) is een Nederlandstalig platform om
           websites te checken, verdachte praktijken te melden en heldere uitleg
@@ -33,6 +32,6 @@ export default function OverOnsPage() {
           of mail ons. We willen snel, zorgvuldig en eerlijk blijven.
         </p>
       </div>
-    </div>
+    </PageShell>
   );
 }

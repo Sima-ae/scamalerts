@@ -15,27 +15,27 @@ export async function SiteHeader() {
   const session = await auth();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line/80 bg-[color-mix(in_oklab,var(--background)_88%,white)] backdrop-blur-md">
-      <div className="section-shell flex items-center justify-between gap-4 py-3.5">
-        <Link href="/" className="min-w-0">
-          <span className="font-display text-2xl tracking-tight text-ink md:text-[1.75rem]">
+    <header className="sticky top-0 z-40 border-b border-line/70 bg-[color-mix(in_oklab,var(--background)_82%,white)] backdrop-blur-xl">
+      <div className="section-shell flex items-center justify-between gap-3 py-3.5 md:gap-6 md:py-4">
+        <Link href="/" className="min-w-0 shrink-0">
+          <span className="font-display text-[1.65rem] tracking-tight text-ink md:text-[1.85rem]">
             {BRAND_NAME}
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm text-ink/80 lg:flex">
+        <nav className="hidden items-center gap-1 text-sm text-ink/80 xl:flex">
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="transition hover:text-accent"
+              className="rounded-md px-3 py-2 transition hover:bg-white/70 hover:text-accent"
             >
               {link.label}
             </Link>
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {session?.user ? (
             <>
               {(session.user.role === "ADMIN" ||

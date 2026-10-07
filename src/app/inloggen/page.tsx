@@ -6,16 +6,24 @@ export const metadata = { title: "Inloggen" };
 
 export default function LoginPage() {
   return (
-    <div className="section-shell py-16">
-      <h1 className="font-display text-center text-4xl text-ink">Inloggen</h1>
-      <p className="mt-3 text-center text-muted">
-        Nog geen account bij {BRAND_NAME}?{" "}
-        <Link href="/registreren" className="font-semibold text-accent hover:underline">
-          Registreren
-        </Link>
-      </p>
-      <div className="mt-10">
-        <LoginForm />
+    <div className="relative overflow-hidden">
+      <div className="ambient-wash pointer-events-none absolute inset-0" aria-hidden />
+      <div className="section-shell relative z-10 py-16 md:py-20">
+        <h1 className="font-display text-center text-4xl text-ink md:text-5xl">
+          Inloggen
+        </h1>
+        <p className="mt-3 text-center text-muted">
+          Nog geen account bij {BRAND_NAME}?{" "}
+          <Link
+            href="/registreren"
+            className="font-semibold text-accent hover:underline"
+          >
+            Registreren
+          </Link>
+        </p>
+        <div className="mx-auto mt-10 max-w-md">
+          <LoginForm />
+        </div>
       </div>
     </div>
   );

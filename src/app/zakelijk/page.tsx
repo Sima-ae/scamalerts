@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { BRAND_NAME } from "@/lib/brand";
+import { PageShell, PageHero } from "@/components/ui/page-shell";
+import { AnimatedItem } from "@/components/ui/animated-section";
 
 export const metadata = {
   title: "Voor bedrijven",
@@ -8,20 +10,14 @@ export const metadata = {
 
 export default function ZakelijkPage() {
   return (
-    <div className="section-shell py-14 md:py-20">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-        Zakelijk
-      </p>
-      <h1 className="font-display mt-2 max-w-3xl text-4xl text-ink md:text-5xl">
-        Laat zien dat jullie merk serieus omgaat met misbruik
-      </h1>
-      <p className="mt-4 max-w-2xl text-lg text-muted">
-        Scammers lenen graag bekende namen. Met een geclaimd profiel kun je
-        bereikbaar zijn voor vragen, context geven bij meldingen en laten zien
-        hoe klanten jullie échte kanalen herkennen.
-      </p>
+    <PageShell>
+      <PageHero
+        eyebrow="Zakelijk"
+        title="Laat zien dat jullie merk serieus omgaat met misbruik"
+        description="Scammers lenen graag bekende namen. Met een geclaimd profiel kun je bereikbaar zijn voor vragen, context geven bij meldingen en laten zien hoe klanten jullie échte kanalen herkennen."
+      />
 
-      <div className="mt-12 grid gap-10 border-t border-line pt-10 md:grid-cols-3">
+      <div className="mx-auto mt-14 grid max-w-lg gap-10 border-t border-line pt-12 text-center sm:max-w-none md:grid-cols-3 md:text-left">
         {[
           {
             title: "Domein claimen",
@@ -35,25 +31,27 @@ export default function ZakelijkPage() {
             title: "Sneller reageren",
             text: "Wees bereikbaar wanneer iemand een melding plaatst over jullie merk of een lookalike.",
           },
-        ].map((item) => (
-          <div key={item.title}>
+        ].map((item, i) => (
+          <AnimatedItem key={item.title} delay={i * 0.08}>
             <h2 className="font-display text-2xl text-ink">{item.title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted">{item.text}</p>
-          </div>
+            <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted md:mx-0 md:max-w-none">
+              {item.text}
+            </p>
+          </AnimatedItem>
         ))}
       </div>
 
-      <div className="mt-12 flex flex-wrap gap-3">
+      <div className="mt-12 flex flex-wrap items-center justify-center gap-3 md:justify-start">
         <Link href="/zakelijk/claimen" className="btn-primary">
           Domein claimen
         </Link>
         <Link
           href="/registreren"
-          className="rounded-md border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink"
+          className="rounded-md border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink/30"
         >
           Eerst account aanmaken
         </Link>
       </div>
-    </div>
+    </PageShell>
   );
 }

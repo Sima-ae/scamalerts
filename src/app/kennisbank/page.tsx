@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatDateNL } from "@/lib/utils";
+import { PageShell, PageHero } from "@/components/ui/page-shell";
+import { AnimatedItem } from "@/components/ui/animated-section";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,7 @@ export default async function KennisbankPage({
   const sp = await searchParams;
   const categories = await prisma.category.findMany({
     orderBy: { name: "asc" },
-  });
+  }).catch(() => []);
 
   const articles = await prisma.article.findMany({
     where: {
@@ -27,23 +29,23 @@ export default async function KennisbankPage({
     },
     include: { category: true },
     orderBy: { publishedAt: "desc" },
-  });
+  }).catch(() => []);
 
   return (
-    <div className="section-shell py-14 md:py-16">
-      <h1 className="font-display text-4xl text-ink md:text-5xl">Kennisbank</h1>
-      <p className="mt-4 max-w-2xl text-muted">
-        Uitleg over scam-vormen die in Nederland veel voorkomen: hoe ze werken,
-        welke signalen je moet zien en wat je kunt doen als het misgaat.
-      </p>
+    <PageShell>
+      <PageHero
+        eyebrow="Leren"
+        title="Kennisbank"
+        description="Uitleg over scam-vormen die in Nederland veel voorkomen: hoe ze werken, welke signalen je moet zien en wat je kunt doen als het misgaat."
+      />
 
-      <div className="mt-8 flex flex-wrap gap-2">
+      <div className="mx-auto mt-10 flex max-w-4xl flex-wrap justify-center gap-2 md:max-w-none md:justify-start">
         <Link
           href="/kennisbank"
-          className={`rounded-md px-3 py-1.5 text-sm ${
+          className={`rounded-md px-3 py-1.5 text-sm transition ${
             !sp.onderwerp
               ? "bg-ink text-white"
-              : "border border-line bg-white text-ink"
+              : "border border-line bg-white text-ink hover:border-ink/30"
           }`}
         >
           Alles
@@ -52,10 +54,10 @@ export default async function KennisbankPage({
           <Link
             key={c.id}
             href={`/kennisbank?onderwerp=${c.slug}`}
-            className={`rounded-md px-3 py-1.5 text-sm ${
+            className={`rounded-md px-3 py-1.5 text-sm transition ${
               sp.onderwerp === c.slug
                 ? "bg-ink text-white"
-                : "border border-line bg-white text-ink"
+                : "border border-line bg-white text-ink hover:border-ink/30"
             }`}
           >
             {c.name}
@@ -63,30 +65,32 @@ export default async function KennisbankPage({
         ))}
       </div>
 
-      <div className="mt-10 grid gap-8 md:grid-cols-2">
-        {articles.map((article) => (
-          <Link
-            key={article.id}
-            href={`/kennisbank/${article.slug}`}
-            className="border-t border-ink/10 pt-5 transition hover:border-accent"
-          >
-            <p className="text-xs text-muted">
-              {article.publishedAt ? formatDateNL(article.publishedAt) : ""}
-              {article.category ? ` · ${article.category.name}` : ""}
-            </p>
-            <h2 className="font-display mt-2 text-2xl text-ink">
-              {article.title}
-            </h2>
-            <p className="mt-2 text-sm text-muted">{article.excerpt}</p>
-          </Link>
+      <div className="mx-auto mt-12 grid max-w-lg gap-10 sm:max-w-none md:grid-cols-2 lg:gap-12">
+        {articles.map((article, i) => (
+          <AnimatedItem key={article.id} delay={Math.min(i, 5) * 0.05}>
+            <Link
+              href={`/kennisbank/${article.slug}`}
+              className="topic-link group block text-center md:text-left"
+            >
+              <p className="text-xs text-muted">
+                {article.publishedAt ? formatDateNL(article.publishedAt) : ""}
+                {article.category ? ` · ${article.category.name}` : ""}
+              </p>
+              <h2 className="font-display mt-2 text-2xl text-ink transition group-hover:text-accent">
+                {article.title}
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-sm text-muted md:mx-0">
+                {article.excerpt}
+              </p>
+            </Link>
+          </AnimatedItem>
         ))}
         {articles.length === 0 && (
-          <p className="text-muted">
-            Nog geen artikelen in dit onderwerp. Bekijk alle gidsen of kom later
-            terug.
+          <p className="text-center text-muted md:col-span-2 md:text-left">
+            Geen artikelen in deze filter.
           </p>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }
