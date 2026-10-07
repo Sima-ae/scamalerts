@@ -154,7 +154,10 @@ export default async function DomainResultPage({
               <h1 className="font-display mt-2 break-all text-3xl leading-tight tracking-tight text-ink sm:text-4xl lg:text-5xl">
                 {domain}
               </h1>
-              <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted md:text-base lg:mx-0">
+              <p className="mt-2 text-sm font-semibold text-ink md:text-base">
+                {trustLabelNL(analysis.label)}
+              </p>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-muted md:text-base lg:mx-0">
                 DNS, TLS, RDAP-leeftijd, HTTPS-gedrag, nabootsing en
                 community-meldingen. Informatief — geen juridisch oordeel.
               </p>

@@ -2,8 +2,11 @@ import { promises as dns } from "dns";
 import type { TrustSignal } from "@/lib/trust/types";
 import { hostsMatch, resolveRedirectHost } from "@/lib/trust/redirect";
 import {
+  brandNeedleHit,
   generateTypoLabels,
+  isPlausibleTypo,
   levenshtein,
+  sharesStrongShape,
   splitDomain,
 } from "@/lib/trust/typo-variants";
 
@@ -15,7 +18,7 @@ const KNOWN_BRANDS = [
   { brand: "ing.nl", needles: ["ing-", "ingbank", "mijn-ing"] },
   { brand: "abnamro.nl", needles: ["abn-", "abnamro", "abn-amro"] },
   { brand: "rabobank.nl", needles: ["rabobank", "rabo-"] },
-  { brand: "bunq.com", needles: ["bunq-"] },
+  { brand: "bunq.com", needles: ["bunq-", "bunq."] },
   { brand: "paypal.com", needles: ["paypal-", "pay-pal"] },
   { brand: "microsoft.com", needles: ["microsoft-", "office365-", "m365-"] },
   { brand: "apple.com", needles: ["apple-", "icloud-"] },
@@ -56,11 +59,23 @@ function isFamousLabel(label: string): boolean {
   return FAMOUS_LABELS.has(label.toLowerCase());
 }
 
-function closestFamousLabel(label: string): { label: string; distance: number } | null {
+function needlesForBrandLabel(brandLabel: string): string[] {
+  const out: string[] = [];
+  for (const entry of KNOWN_BRANDS) {
+    if (splitDomain(entry.brand).label === brandLabel) {
+      out.push(...entry.needles);
+    }
+  }
+  return out;
+}
+
+function closestFamousLabel(
+  label: string,
+): { label: string; distance: number } | null {
   let best: { label: string; distance: number } | null = null;
   for (const famous of FAMOUS_LABELS) {
+    if (!isPlausibleTypo(label, famous)) continue;
     const distance = levenshtein(label, famous);
-    if (distance < 1 || distance > 2) continue;
     if (!best || distance < best.distance) {
       best = { label: famous, distance };
     }
@@ -95,6 +110,7 @@ type Lookalike = {
   distance: number;
   reason: string;
   famous: boolean;
+  confidence: "high" | "medium";
 };
 
 async function findLookalikes(domain: string): Promise<Lookalike[]> {
@@ -110,16 +126,34 @@ async function findLookalikes(domain: string): Promise<Lookalike[]> {
     found.push(item);
   };
 
+  // Brand stem / phishing needles inside the label (secure-bunq-login.nl)
+  for (const entry of KNOWN_BRANDS) {
+    const b = splitDomain(entry.brand);
+    if (!brandNeedleHit(label, b.label, entry.needles)) continue;
+    if (!(await resolves(entry.brand))) continue;
+    push({
+      domain: entry.brand,
+      distance: Math.max(1, levenshtein(label, b.label)),
+      reason: `bevat merksignaal van ${entry.brand}`,
+      famous: true,
+      confidence: "high",
+    });
+  }
+
   // Famous brand labels (cross-TLD): applee.nl → apple.nl / apple.com
   const famous = closestFamousLabel(label);
   if (famous) {
+    const shape = sharesStrongShape(label, famous.label);
+    const confidence: "high" | "medium" =
+      famous.distance === 1 || shape ? "high" : "medium";
     const sameTld = `${famous.label}.${tld}`;
     if (await resolves(sameTld)) {
       push({
         domain: sameTld,
         distance: famous.distance,
-        reason: `lijkt op bekend merk “${famous.label}”`,
+        reason: `sterke spellingsovereenkomst met bekend merk “${famous.label}”`,
         famous: true,
+        confidence,
       });
     }
     for (const entry of KNOWN_BRANDS) {
@@ -129,23 +163,28 @@ async function findLookalikes(domain: string): Promise<Lookalike[]> {
       push({
         domain: entry.brand,
         distance: famous.distance,
-        reason: `lijkt op bekend merk ${entry.brand}`,
+        reason: `sterke spellingsovereenkomst met ${entry.brand}`,
         famous: true,
+        confidence,
       });
     }
   }
 
-  // Exact known brand domains at edit distance 1–2 (any TLD)
+  // Exact known brand domains — only when typo gate passes
   for (const entry of KNOWN_BRANDS) {
     const b = splitDomain(entry.brand);
+    if (!isPlausibleTypo(label, b.label)) continue;
     const distance = levenshtein(label, b.label);
-    if (distance < 1 || distance > 2) continue;
     if (!(await resolves(entry.brand))) continue;
+    const needle = brandNeedleHit(label, b.label, entry.needles);
     push({
       domain: entry.brand,
       distance,
-      reason: "bekend merk met bijna-identieke spelling",
+      reason: needle
+        ? `bevat merksignaal van ${entry.brand}`
+        : "bekend merk met zeer vergelijkbare spelling",
       famous: true,
+      confidence: distance === 1 || needle ? "high" : "medium",
     });
   }
 
@@ -156,7 +195,12 @@ async function findLookalikes(domain: string): Promise<Lookalike[]> {
       domain: `${c}.${tld}`,
       distance: levenshtein(label, c),
     }))
-    .filter((c) => c.distance >= 1 && c.distance <= 2)
+    .filter(
+      (c) =>
+        c.distance >= 1 &&
+        c.distance <= 2 &&
+        isPlausibleTypo(label, c.label),
+    )
     .sort((a, b) => a.distance - b.distance);
 
   const batchSize = 8;
@@ -170,14 +214,16 @@ async function findLookalikes(domain: string): Promise<Lookalike[]> {
     );
     for (const hit of results) {
       if (!hit.ok) continue;
+      const famousHit = isFamousLabel(hit.label);
       push({
         domain: hit.domain,
         distance: hit.distance,
         reason:
           hit.distance === 1
             ? "actief domein op 1 typfout afstand"
-            : "actief domein op 2 typfouten afstand",
-        famous: isFamousLabel(hit.label),
+            : "actief domein op 2 typfouten afstand met gedeelde structuur",
+        famous: famousHit,
+        confidence: hit.distance === 1 || famousHit ? "high" : "medium",
       });
     }
   }
@@ -258,7 +304,7 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
         label: "Merk-/overheidsnabootsing",
         positive: true,
         detail:
-          "Geen actief lookalike-domein of bekende merknabootsing gevonden in de naam",
+          "Geen overtuigende merknabootsing of actief lookalike-domein gevonden",
         weight: 20,
         group: "heuristiek",
         delta: 3,
@@ -271,6 +317,7 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
     lookalikes.map(async (l) => ({
       ...l,
       auth: await assessAuthority(l.domain),
+      brandLabel: splitDomain(l.domain).label,
     })),
   );
 
@@ -290,6 +337,10 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
       if (!subjectAuth.famousLabel && !subjectAuth.known) {
         peer.auth.score += 80;
       }
+    }
+    // Downgrade weak medium-confidence name hits versus an independent active site
+    if (peer.confidence === "medium" && subjectAuth.resolves) {
+      peer.auth.score -= 35;
     }
   }
 
@@ -329,13 +380,23 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
   const peerIsFamousBrand =
     best.famous || best.auth.famousLabel || best.auth.known;
   const subjectIsFamous = subjectAuth.famousLabel || subjectAuth.known;
+  const needle = brandNeedleHit(
+    subjectLabel,
+    best.brandLabel,
+    needlesForBrandLabel(best.brandLabel),
+  );
+  const plausible = isPlausibleTypo(subjectLabel, best.brandLabel) || needle;
 
-  // Impersonating a famous brand beats local authority heuristics
-  // (e.g. applee.nl must not outrank apple.nl / apple.com).
+  // Only hard-flag famous brands on high-confidence evidence
+  // (single edit, brand needle, or strong shared shape — not loose distance-2).
   const forceTyposquat =
     peerIsFamousBrand &&
     !subjectIsFamous &&
-    best.distance <= 2;
+    plausible &&
+    best.confidence === "high" &&
+    (best.distance === 1 ||
+      needle ||
+      sharesStrongShape(subjectLabel, best.brandLabel));
 
   if (!forceTyposquat && subjectAuth.score >= best.auth.score) {
     if (
@@ -350,6 +411,36 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
     }
     return safeSignal(
       subject,
+      "Geen overtuigende nabootsing van een sterker merkdomein gevonden",
+      5,
+    );
+  }
+
+  // Medium-only famous hit without force evidence → informational, not a risk
+  if (peerIsFamousBrand && !forceTyposquat && best.confidence !== "high") {
+    return [
+      {
+        key: "spoof",
+        label: "Merk-/overheidsnabootsing",
+        positive: true,
+        detail:
+          "Geen overtuigende merknabootsing: zwakke spellingsovereenkomsten met bekende merken zijn genegeerd",
+        weight: 20,
+        group: "heuristiek",
+        delta: 3,
+        raw: {
+          method: "weak_filtered",
+          considered: best.domain,
+          distance: best.distance,
+          confidence: best.confidence,
+        },
+      },
+    ];
+  }
+
+  if (!forceTyposquat && !peerIsFamousBrand) {
+    return safeSignal(
+      subject,
       "Geen sterkere lookalike gevonden; dit domein lijkt geen nabootsing",
       5,
     );
@@ -359,11 +450,9 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
     ? ""
     : " Het gecontroleerde domein lijkt daarnaast niet actief (geen DNS).";
 
-  // Famous-brand lookalikes (applee → apple) need a hard score hit even if
-  // DNS/TLS/age otherwise look “healthy”.
   let delta = -28;
   if (!subjectAuth.resolves) delta = -34;
-  if (forceTyposquat || peerIsFamousBrand) {
+  if (forceTyposquat) {
     delta = subjectAuth.resolves ? -55 : -60;
   }
 
@@ -372,7 +461,7 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
       key: "spoof",
       label: "Merk-/overheidsnabootsing",
       positive: false,
-      detail: `Waarschijnlijke typosquat van ${best.domain} (${best.reason}).${inactiveNote}`,
+      detail: `Sterke aanwijzing voor typosquat van ${best.domain} (${best.reason}).${inactiveNote}`,
       weight: 24,
       group: "heuristiek",
       delta,
@@ -382,9 +471,11 @@ export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
         reason: best.reason,
         inputResolves: subjectAuth.resolves,
         distance: best.distance,
+        confidence: best.confidence,
         subjectScore: subjectAuth.score,
         peerScore: best.auth.score,
         forceTyposquat,
+        needle,
       },
     },
   ];
