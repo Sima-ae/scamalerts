@@ -164,10 +164,6 @@ export default async function DomainResultPage({
                 <MetaChip label="Positief" value={String(positiveCount)} />
                 <MetaChip label="Risico’s" value={String(risks.length)} />
                 <MetaChip
-                  label="Bron"
-                  value={analysis.cached ? "Cache" : "Live"}
-                />
-                <MetaChip
                   label="Bijgewerkt"
                   value={formatDateNL(lastUpdated)}
                 />
