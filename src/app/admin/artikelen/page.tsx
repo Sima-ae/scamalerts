@@ -13,7 +13,7 @@ export default async function AdminArticlesPage() {
   ]);
 
   return (
-    <div className="section-shell py-12 md:py-16">
+    <div className="section-shell py-12 text-center md:py-16 md:text-left">
       <Link href="/admin" className="text-sm font-semibold text-accent hover:underline">
         ← Terug naar admin
       </Link>
@@ -21,7 +21,7 @@ export default async function AdminArticlesPage() {
 
       <form
         action={createArticle}
-        className="mt-8 max-w-2xl space-y-4 border border-line bg-white p-5"
+        className="mx-auto mt-8 w-full max-w-2xl space-y-4 border border-line bg-white p-5 md:mx-0"
       >
         <h2 className="text-lg font-semibold text-ink">Nieuw artikel</h2>
         <input
@@ -57,15 +57,15 @@ export default async function AdminArticlesPage() {
             </option>
           ))}
         </select>
-        <label className="flex items-center gap-2 text-sm text-ink">
+        <label className="flex items-center justify-center gap-2 text-sm text-ink md:justify-start">
           <input type="checkbox" name="publish" value="1" /> Direct publiceren
         </label>
-        <button className="btn-ink">Opslaan</button>
+        <button className="btn-ink w-full sm:w-auto">Opslaan</button>
       </form>
 
       <ul className="mt-10 divide-y divide-line">
         {articles.map((a) => (
-          <li key={a.id} className="flex justify-between py-3 text-sm">
+          <li key={a.id} className="flex flex-col items-center gap-1 py-3 text-sm sm:flex-row sm:justify-between">
             <span className="text-ink">{a.title}</span>
             <span className="text-muted">{a.status}</span>
           </li>

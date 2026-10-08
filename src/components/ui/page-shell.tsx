@@ -67,7 +67,7 @@ export function PageBanner({
             </p>
           )}
           {children && (
-            <div className="animate-rise-late mt-8 flex justify-center">
+            <div className="animate-rise-late mt-8 flex w-full justify-center">
               {children}
             </div>
           )}

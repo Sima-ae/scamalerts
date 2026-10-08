@@ -51,7 +51,7 @@ export function SplitFeature({
         </p>
         {children}
         <div className="mt-8 flex justify-center lg:justify-start">
-          <Link href={href} className="btn-ink group gap-2 text-sm">
+          <Link href={href} className="btn-ink group w-full gap-2 text-sm sm:w-auto">
             {cta}
             <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
           </Link>

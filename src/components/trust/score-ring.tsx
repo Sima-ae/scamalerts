@@ -62,7 +62,7 @@ export function ScoreRing({
       className={`relative flex shrink-0 items-center justify-center ${
         small
           ? "h-26 w-26"
-          : "mx-auto h-38 w-38 md:mx-0 md:h-42 md:w-42"
+          : "mx-auto h-38 w-38 md:h-42 md:w-42 lg:mx-0"
       }`}
       role="img"
       aria-label={`Trust Score ${Math.round(clamped)}: ${label}`}

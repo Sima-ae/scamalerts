@@ -39,7 +39,7 @@ export function ReportForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-2xl space-y-5">
+    <form onSubmit={onSubmit} className="mx-auto w-full max-w-2xl space-y-5 text-center">
       <div>
         <label className="text-sm font-medium text-ink">
           Titel van de melding
@@ -124,7 +124,7 @@ export function ReportForm({
         </div>
       </div>
       {error && <p className="text-sm text-danger">{error}</p>}
-      <button type="submit" disabled={loading} className="btn-primary disabled:opacity-60">
+      <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-60 sm:w-auto">
         {loading ? "Versturen…" : "Melding versturen"}
       </button>
       <p className="text-xs text-muted">

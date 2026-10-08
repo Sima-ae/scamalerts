@@ -108,7 +108,7 @@ export default async function HomePage() {
     <div className="w-full">
       <section className="hero-plane relative w-full">
         <MediaFrame media={MEDIA.hero} priority overlay="ink" />
-        <div className="section-shell relative z-10 grid min-h-[min(92vh,920px)] items-center gap-12 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+        <div className="section-shell relative z-10 grid items-center gap-12 py-14 md:min-h-[min(92vh,920px)] md:py-24 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
           <div className="mx-auto w-full max-w-3xl text-center lg:mx-0 lg:text-left">
             <h1 className="animate-rise mx-auto max-w-xl text-xl font-medium text-white md:text-2xl lg:mx-0">
               Weet je zeker dat die website te vertrouwen is?
@@ -117,14 +117,14 @@ export default async function HomePage() {
               Check een domein in seconden, deel wat je meemaakt en lees hoe
               andere scams werken in Nederland.
             </p>
-            <div className="animate-rise-late mx-auto mt-10 flex max-w-2xl justify-center lg:mx-0 lg:justify-start">
+            <div className="animate-rise-late mx-auto mt-10 flex w-full max-w-2xl justify-center lg:mx-0 lg:justify-start">
               <DomainSearch large variant="hero" />
             </div>
-            <div className="animate-rise-late mt-6 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-              <Link href="/melden" className="btn-primary">
+            <div className="animate-rise-late mt-6 flex w-full flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start">
+              <Link href="/melden" className="btn-primary w-full sm:w-auto">
                 Scam melden
               </Link>
-              <Link href="/meldingen" className="btn-secondary">
+              <Link href="/meldingen" className="btn-secondary w-full sm:w-auto">
                 Bekijk meldingen
               </Link>
             </div>
@@ -264,7 +264,7 @@ export default async function HomePage() {
               Geen magische knop: wel een heldere uitleg van wat we meten en wat
               dat voor jou betekent vóór je iets betaalt of deelt.
             </p>
-            <Link href="/controleren" className="btn-primary mt-8 inline-flex">
+            <Link href="/controleren" className="btn-primary mt-8 inline-flex w-full sm:w-auto">
               Start een check
             </Link>
           </div>
@@ -290,12 +290,12 @@ export default async function HomePage() {
               verpakking. Kies een thema en lees de signalen.
             </p>
           </div>
-          <div className="mx-auto mt-12 grid max-w-lg gap-4 sm:max-w-none sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-12 grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {topics.map((topic, i) => (
               <AnimatedItem key={topic.title} delay={i * 0.05}>
                 <Link
                   href={topic.href}
-                  className="group flex h-full flex-col items-center rounded-xl border border-line bg-white/70 p-6 text-center transition hover:-translate-y-0.5 hover:border-accent/40 hover:bg-white sm:items-start sm:text-left"
+                  className="group flex h-full w-full flex-col items-center rounded-xl border border-line bg-white/70 p-6 text-center transition hover:-translate-y-0.5 hover:border-accent/40 hover:bg-white md:items-start md:text-left"
                 >
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-soft text-accent transition group-hover:bg-accent group-hover:text-white">
                     <topic.icon className="h-5 w-5" />
@@ -325,12 +325,12 @@ export default async function HomePage() {
             reverse
           >
             {articles.length > 0 && (
-              <ul className="mt-6 divide-y divide-line border-y border-line text-left">
+              <ul className="mt-6 w-full divide-y divide-line border-y border-line text-center lg:text-left">
                 {articles.map((article) => (
                   <li key={article.id}>
                     <Link
                       href={`/kennisbank/${article.slug}`}
-                      className="group flex items-center justify-between gap-4 py-3.5"
+                      className="group flex flex-col items-center gap-1 py-3.5 lg:flex-row lg:justify-between lg:gap-4"
                     >
                       <span className="font-semibold text-ink transition group-hover:text-accent">
                         {article.title}
@@ -359,11 +359,11 @@ export default async function HomePage() {
               Laat zien dat jullie bereikbaar zijn voor vragen over misbruik van
               jullie naam. Claimen verandert geen Trust Score — transparantie wel.
             </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
-              <Link href="/zakelijk" className="btn-primary">
+            <div className="mt-8 flex w-full flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start">
+              <Link href="/zakelijk" className="btn-primary w-full sm:w-auto">
                 Meer over zakelijk
               </Link>
-              <Link href="/zakelijk/claimen" className="btn-secondary">
+              <Link href="/zakelijk/claimen" className="btn-secondary w-full sm:w-auto">
                 Domein claimen
               </Link>
             </div>

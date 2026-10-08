@@ -18,7 +18,7 @@ export async function SiteHeader() {
 
   return (
     <HeaderFrame>
-      <div className="section-shell flex items-center justify-between gap-3 py-3.5 md:gap-6 md:py-4">
+      <div className="section-shell flex flex-col items-center gap-3 py-3 md:flex-row md:justify-between md:gap-6 md:py-4">
         <Link href="/" className="min-w-0 shrink-0">
           <img
             src="/all-scams-name.png"
@@ -39,7 +39,7 @@ export async function SiteHeader() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex w-full items-center justify-center gap-2 md:w-auto md:justify-end">
           {session?.user ? (
             (session.user.role === "ADMIN" ||
               session.user.role === "EDITOR") && (
@@ -66,7 +66,10 @@ export async function SiteHeader() {
           >
             <UserRound className="h-5 w-5" aria-hidden />
           </Link>
-          <Link href="/melden" className="btn-ink px-3 py-2 text-sm">
+          <Link
+            href="/melden"
+            className="btn-ink whitespace-nowrap px-3 py-2 text-sm"
+          >
             Scam melden
           </Link>
           <MobileNav links={links} />

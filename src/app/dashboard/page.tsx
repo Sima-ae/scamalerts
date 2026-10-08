@@ -16,8 +16,8 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="section-shell py-12 md:py-16">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="section-shell py-12 text-center md:py-16 md:text-left">
+      <div className="flex flex-col items-center gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
             Dashboard
@@ -27,23 +27,24 @@ export default async function DashboardPage() {
           </h1>
           <p className="mt-2 text-muted">{session.user.email}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/melden" className="btn-primary text-sm">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center md:justify-end">
+          <Link href="/melden" className="btn-primary w-full text-sm sm:w-auto">
             Nieuwe melding
           </Link>
           <Link
             href="/zakelijk/claimen"
-            className="rounded-md border border-line bg-white px-4 py-2 text-sm text-ink"
+            className="w-full rounded-md border border-line bg-white px-4 py-2 text-sm text-ink sm:w-auto"
           >
             Zakelijk
           </Link>
           <form
+            className="w-full sm:w-auto"
             action={async () => {
               "use server";
               await signOut({ redirectTo: "/" });
             }}
           >
-            <button className="rounded-md border border-line bg-white px-4 py-2 text-sm text-ink">
+            <button className="w-full rounded-md border border-line bg-white px-4 py-2 text-sm text-ink sm:w-auto">
               Uitloggen
             </button>
           </form>
@@ -55,7 +56,7 @@ export default async function DashboardPage() {
         {reports.map((r) => (
           <div
             key={r.id}
-            className="flex items-center justify-between gap-4 py-4"
+            className="flex flex-col items-center gap-2 py-4 text-center sm:flex-row sm:justify-between sm:text-left"
           >
             <div>
               <p className="font-medium text-ink">{r.title}</p>

@@ -135,7 +135,7 @@ export default async function DomainResultPage({
       {/* Compact search strip */}
       <div className="relative z-10 border-b border-line/80 bg-white/50 backdrop-blur-sm">
         <div className="section-shell py-5 md:py-6">
-          <div className="mx-auto max-w-2xl md:mx-0">
+          <div className="mx-auto w-full max-w-2xl lg:mx-0">
             <DomainSearch initial={domain} />
           </div>
         </div>
@@ -230,7 +230,7 @@ export default async function DomainResultPage({
                   {risks.map((r) => (
                     <li
                       key={r.key}
-                      className="border-t border-danger/10 pt-3 text-sm leading-relaxed text-ink first:border-0 first:pt-0"
+                      className="border-t border-danger/10 pt-3 text-center text-sm leading-relaxed text-ink first:border-0 first:pt-0 lg:text-left"
                     >
                       <span className="font-semibold">{r.label}</span>
                       <span className="mt-0.5 block text-muted">{r.detail}</span>
@@ -263,7 +263,7 @@ export default async function DomainResultPage({
                   {notices.map((n) => (
                     <li
                       key={n.key}
-                      className="border-t border-amber-200/80 pt-3 text-sm leading-relaxed text-ink first:border-0 first:pt-0"
+                      className="border-t border-amber-200/80 pt-3 text-center text-sm leading-relaxed text-ink first:border-0 first:pt-0 lg:text-left"
                     >
                       <span className="font-semibold">{n.label}</span>
                       <span className="mt-0.5 block text-muted">{n.detail}</span>
@@ -304,15 +304,15 @@ export default async function DomainResultPage({
                 {group.items.map((signal) => (
                   <li
                     key={signal.key}
-                    className={`flex flex-col gap-3 px-4 py-4 transition sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:px-5 sm:py-5 ${
+                    className={`flex flex-col gap-3 px-4 py-4 transition md:flex-row md:items-start md:justify-between md:gap-6 md:px-5 md:py-5 ${
                       signal.positive === false
                         ? "bg-[color-mix(in_oklab,var(--danger)_4%,transparent)]"
                         : "hover:bg-surface/80"
                     }`}
                   >
-                    <div className="min-w-0 text-center sm:text-left">
+                    <div className="min-w-0 text-center md:text-left">
                       <p className="font-semibold text-ink">{signal.label}</p>
-                      <p className="mx-auto mt-1 max-w-2xl text-sm leading-relaxed text-muted sm:mx-0">
+                      <p className="mx-auto mt-1 max-w-2xl text-sm leading-relaxed text-muted md:mx-0">
                         {signal.detail}
                       </p>
                       {signal.source && (
@@ -330,7 +330,7 @@ export default async function DomainResultPage({
                         </Link>
                       )}
                     </div>
-                    <div className="flex shrink-0 justify-center sm:justify-end sm:pt-0.5">
+                    <div className="flex shrink-0 justify-center md:justify-end md:pt-0.5">
                       <SignalStatus
                         positive={signal.positive}
                         unavailable={signal.unavailable}
@@ -344,11 +344,11 @@ export default async function DomainResultPage({
         </div>
 
         {/* Sources & method */}
-        <section className="mt-14 rounded-xl border border-line bg-white/60 p-5 md:mt-16 md:p-6">
+        <section className="mt-14 rounded-xl border border-line bg-white/60 p-5 text-center md:mt-16 md:p-6 md:text-left">
           <h2 className="font-display text-xl text-ink md:text-2xl">
             Bronnen &amp; methode
           </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">
+          <p className="mx-auto mt-2 max-w-3xl text-sm leading-relaxed text-muted md:mx-0">
             Elke scan haalt de gegevens live op bij onderstaande bronnen. De
             score start op 50 en elk signaal telt op of af. Een vermelding op
             een dreigingslijst, sterke merknabootsing of meerdere goedgekeurde

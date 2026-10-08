@@ -23,7 +23,7 @@ export default async function AdminPage() {
   ]);
 
   return (
-    <div className="section-shell py-12 md:py-16">
+    <div className="section-shell py-12 text-center md:py-16 md:text-left">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
         Admin
       </p>
@@ -31,7 +31,7 @@ export default async function AdminPage() {
         Moderatie & overzicht
       </h1>
 
-      <div className="mt-8 flex flex-wrap gap-4 text-sm">
+      <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm md:justify-start">
         {stats.map((s) => (
           <div key={s.status} className="border border-line bg-white px-4 py-3">
             <p className="text-xs uppercase text-muted">{s.status}</p>
@@ -55,7 +55,7 @@ export default async function AdminPage() {
             key={report.id}
             className="border border-line bg-white p-5"
           >
-            <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-col items-center gap-4 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="text-xs text-muted">
                   {formatDateNL(report.createdAt)}
@@ -72,18 +72,18 @@ export default async function AdminPage() {
                   {report.reporterEmail ? ` · ${report.reporterEmail}` : ""}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <form action={moderateReport}>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <form action={moderateReport} className="w-full sm:w-auto">
                   <input type="hidden" name="id" value={report.id} />
                   <input type="hidden" name="action" value="APPROVED" />
-                  <button className="btn-ink px-3 py-1.5 text-sm">
+                  <button className="btn-ink w-full px-3 py-1.5 text-sm sm:w-auto">
                     Goedkeuren
                   </button>
                 </form>
-                <form action={moderateReport}>
+                <form action={moderateReport} className="w-full sm:w-auto">
                   <input type="hidden" name="id" value={report.id} />
                   <input type="hidden" name="action" value="REJECTED" />
-                  <button className="rounded-md border border-danger/40 px-3 py-1.5 text-sm text-danger">
+                  <button className="w-full rounded-md border border-danger/40 px-3 py-1.5 text-sm text-danger sm:w-auto">
                     Afwijzen
                   </button>
                 </form>

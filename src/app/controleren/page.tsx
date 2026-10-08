@@ -70,10 +70,10 @@ export default function ControlerenPage() {
           Zes signalen, één score
         </h2>
       </div>
-      <div className="mx-auto mt-10 grid max-w-lg gap-4 sm:max-w-none sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-10 grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {checks.map((check, i) => (
           <AnimatedItem key={check.title} delay={i * 0.05}>
-            <div className="flex h-full flex-col items-center rounded-xl border border-line bg-white/75 p-6 text-center sm:items-start sm:text-left">
+            <div className="flex h-full w-full flex-col items-center rounded-xl border border-line bg-white/75 p-6 text-center md:items-start md:text-left">
               <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-soft text-accent">
                 <check.icon className="h-5 w-5" />
               </span>

@@ -23,7 +23,7 @@ export default async function ClaimPage() {
         media: MEDIA.business,
       }}
     >
-      <div className="mx-auto max-w-xl">
+      <div className="mx-auto w-full max-w-xl text-center">
         <Link
           href="/zakelijk"
           className="text-sm font-semibold text-accent hover:underline"
@@ -58,7 +58,7 @@ export default async function ClaimPage() {
             placeholder="Bewijs-URL (KvK, website, etc.)"
             className="input-field"
           />
-          <button className="btn-ink w-full sm:w-auto">Claim indienen</button>
+          <button className="btn-ink w-full">Claim indienen</button>
         </form>
       </div>
     </PageShell>

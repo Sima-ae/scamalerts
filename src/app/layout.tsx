@@ -36,6 +36,10 @@ export const metadata: Metadata = {
     description:
       "Controleer een website, bekijk meldingen en leer scams herkennen.",
   },
+  icons: {
+    icon: [{ url: "/all-scams-favicon.png", type: "image/png", sizes: "192x192" }],
+    apple: [{ url: "/all-scams-favicon.png", sizes: "192x192" }],
+  },
 };
 
 export default function RootLayout({

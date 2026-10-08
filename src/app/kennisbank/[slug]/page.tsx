@@ -49,10 +49,10 @@ export default async function ArticlePage({
         {article.excerpt && (
           <p className="mt-4 text-lg text-muted">{article.excerpt}</p>
         )}
-        <div className="mt-10 space-y-4 whitespace-pre-wrap text-left leading-relaxed text-ink/90">
+        <div className="mt-10 space-y-4 whitespace-pre-wrap text-center leading-relaxed text-ink/90 md:text-left">
           {article.content}
         </div>
-        <div className="mt-12 border-t border-line pt-6">
+        <div className="mt-12 border-t border-line pt-6 text-center md:text-left">
           <Link
             href="/kennisbank"
             className="text-sm font-semibold text-accent hover:underline"

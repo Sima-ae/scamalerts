@@ -44,13 +44,13 @@ export default function ZakelijkPage() {
         ))}
       </div>
 
-      <div className="mt-12 flex flex-wrap items-center justify-center gap-3 md:justify-start">
-        <Link href="/zakelijk/claimen" className="btn-primary">
+      <div className="mt-12 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:justify-center md:justify-start">
+        <Link href="/zakelijk/claimen" className="btn-primary w-full sm:w-auto">
           Domein claimen
         </Link>
         <Link
           href="/registreren"
-          className="rounded-md border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink/30"
+          className="inline-flex w-full items-center justify-center rounded-md border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink/30 sm:w-auto"
         >
           Eerst account aanmaken
         </Link>
