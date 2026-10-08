@@ -8,7 +8,6 @@ import { SplitFeature } from "@/components/home/split-feature";
 import { prisma } from "@/lib/prisma";
 import { formatDateNL } from "@/lib/utils";
 import { trustLabelNL } from "@/lib/trust-score";
-import { BRAND_NAME } from "@/lib/brand";
 import { MEDIA } from "@/lib/media";
 import {
   ShoppingBag,
@@ -111,12 +110,9 @@ export default async function HomePage() {
         <MediaFrame media={MEDIA.hero} priority overlay="ink" />
         <div className="section-shell relative z-10 grid min-h-[min(92vh,920px)] items-center gap-12 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
           <div className="mx-auto w-full max-w-3xl text-center lg:mx-0 lg:text-left">
-            <h1 className="animate-rise font-display text-[clamp(3.25rem,10vw,6.5rem)] leading-[0.92] tracking-tight text-white">
-              {BRAND_NAME}
-            </h1>
-            <p className="animate-rise-delay mx-auto mt-6 max-w-xl text-xl font-medium text-white md:text-2xl lg:mx-0">
+            <h1 className="animate-rise mx-auto max-w-xl text-xl font-medium text-white md:text-2xl lg:mx-0">
               Weet je zeker dat die website te vertrouwen is?
-            </p>
+            </h1>
             <p className="animate-rise-delay mx-auto mt-3 max-w-lg text-base leading-relaxed text-white/75 md:text-lg lg:mx-0">
               Check een domein in seconden, deel wat je meemaakt en lees hoe
               andere scams werken in Nederland.
