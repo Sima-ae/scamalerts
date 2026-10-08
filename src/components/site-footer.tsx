@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BRAND_NAME, copyrightLine } from "@/lib/brand";
+import { copyrightLine } from "@/lib/brand";
 
 export function SiteFooter() {
   return (
@@ -14,9 +14,11 @@ export function SiteFooter() {
       />
       <div className="section-shell relative z-10 grid gap-12 py-16 md:grid-cols-4 md:gap-10 md:py-20">
         <div className="text-center md:col-span-2 md:text-left">
-          <p className="font-display text-3xl text-white md:text-4xl">
-            {BRAND_NAME}
-          </p>
+          <img
+            src="/all-scams-name-light.png"
+            alt="All Scams"
+            className="brand-logo-footer mx-auto md:mx-0"
+          />
           <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-white/65 md:mx-0">
             Check websites, telefoonnummers en betaalverzoeken. Deel
             scam-ervaringen zodat anderen sneller doorhebben wat er speelt — met

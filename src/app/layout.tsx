@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     siteName: BRAND_NAME,
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: BRAND_NAME,
     description:
       "Controleer een website, bekijk meldingen en leer scams herkennen.",

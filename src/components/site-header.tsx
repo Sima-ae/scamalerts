@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { BRAND_NAME } from "@/lib/brand";
 import { MobileNav } from "@/components/mobile-nav";
 import { HeaderFrame } from "@/components/header-frame";
 
@@ -21,9 +20,11 @@ export async function SiteHeader() {
     <HeaderFrame>
       <div className="section-shell flex items-center justify-between gap-3 py-3.5 md:gap-6 md:py-4">
         <Link href="/" className="min-w-0 shrink-0">
-          <span className="font-display text-[1.65rem] tracking-tight text-ink md:text-[1.85rem]">
-            {BRAND_NAME}
-          </span>
+          <img
+            src="/all-scams-name.png"
+            alt="All Scams"
+            className="brand-logo"
+          />
         </Link>
 
         <nav className="hidden items-center gap-1 text-sm text-ink/80 xl:flex">

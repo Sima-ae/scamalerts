@@ -61,6 +61,29 @@ video {
   height: auto;
 }
 
+/* Beats the img height rule above so the wordmark can be sized by height. */
+img.brand-logo {
+  width: auto;
+  max-width: none;
+  height: 2.5rem;
+}
+
+img.brand-logo-footer {
+  width: auto;
+  max-width: none;
+  height: 3rem;
+}
+
+@media (min-width: 768px) {
+  img.brand-logo {
+    height: 3rem;
+  }
+
+  img.brand-logo-footer {
+    height: 3.5rem;
+  }
+}
+
 a {
   text-decoration: none;
 }
