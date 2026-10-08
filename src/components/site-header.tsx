@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UserRound } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { BRAND_NAME } from "@/lib/brand";
 import { MobileNav } from "@/components/mobile-nav";
@@ -14,6 +15,8 @@ const links = [
 
 export async function SiteHeader() {
   const session = await auth();
+  const accountHref = session?.user ? "/dashboard" : "/registreren";
+  const accountLabel = session?.user ? "Dashboard" : "Account";
 
   return (
     <HeaderFrame>
@@ -38,33 +41,34 @@ export async function SiteHeader() {
 
         <div className="flex items-center gap-1.5 sm:gap-2">
           {session?.user ? (
-            <>
-              {(session.user.role === "ADMIN" ||
-                session.user.role === "EDITOR") && (
-                <Link
-                  href="/admin"
-                  className="hidden rounded-md px-3 py-2 text-sm text-ink/80 hover:bg-white sm:inline"
-                >
-                  Admin
-                </Link>
-              )}
-              <Link href="/dashboard" className="btn-ink px-3 py-2 text-sm">
-                Dashboard
-              </Link>
-            </>
-          ) : (
-            <>
+            (session.user.role === "ADMIN" ||
+              session.user.role === "EDITOR") && (
               <Link
-                href="/inloggen"
+                href="/admin"
                 className="hidden rounded-md px-3 py-2 text-sm text-ink/80 hover:bg-white sm:inline"
               >
-                Inloggen
+                Admin
               </Link>
-              <Link href="/registreren" className="btn-ink px-3 py-2 text-sm">
-                Account
-              </Link>
-            </>
+            )
+          ) : (
+            <Link
+              href="/inloggen"
+              className="hidden rounded-md px-3 py-2 text-sm text-ink/80 hover:bg-white sm:inline"
+            >
+              Inloggen
+            </Link>
           )}
+          <Link
+            href={accountHref}
+            aria-label={accountLabel}
+            title={accountLabel}
+            className="inline-flex items-center justify-center rounded-md border border-line bg-white p-2 text-ink transition hover:border-ink/30 hover:bg-white"
+          >
+            <UserRound className="h-5 w-5" aria-hidden />
+          </Link>
+          <Link href="/melden" className="btn-ink px-3 py-2 text-sm">
+            Scam melden
+          </Link>
           <MobileNav links={links} />
         </div>
       </div>
