@@ -119,7 +119,7 @@ export default async function HomePage() {
             </p>
             <p className="animate-rise-delay mx-auto mt-3 max-w-lg text-base leading-relaxed text-white/75 md:text-lg lg:mx-0">
               Check een domein in seconden, deel wat je meemaakt en lees hoe
-              Nederlandse scams écht werken.
+              andere Nederlandse scams werken.
             </p>
             <div className="animate-rise-late mx-auto mt-10 flex max-w-2xl justify-center lg:mx-0 lg:justify-start">
               <DomainSearch large variant="hero" />
