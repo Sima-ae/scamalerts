@@ -1,54 +1,34 @@
+import { parse } from "tldts";
 import type { TrustSignal } from "@/lib/trust/types";
-import { hostsMatch, resolveRedirectHost } from "@/lib/trust/redirect";
+import type { DomainParts } from "@/lib/trust/domain-parts";
+import { resolveRedirectHost } from "@/lib/trust/redirect";
 
-export async function collectHttp(domain: string): Promise<TrustSignal[]> {
-  const finalHost = await resolveRedirectHost(domain);
+const base = { key: "https", label: "Bereikbaarheid & doorverwijzing", weight: 12, group: "technisch" as const };
+
+export async function collectHttp(parts: DomainParts): Promise<TrustSignal[]> {
+  const finalHost = await resolveRedirectHost(parts.host);
 
   if (!finalHost) {
-    return [
-      {
-        key: "https",
-        label: "HTTPS-gedrag",
-        positive: false,
-        detail:
-          "Geen betrouwbare HTTP(S)-respons (offline, timeout of geblokkeerd)",
-        weight: 12,
-        group: "technisch",
-        delta: -10,
-      },
-    ];
+    return [{
+      ...base,
+      positive: false,
+      delta: -8,
+      detail: "Geen HTTP(S)-antwoord binnen 4,5 seconden (offline, geblokkeerd of time-out).",
+      source: "HTTP(S)-verzoek",
+    }];
   }
 
-  const redirectedAway = !hostsMatch(finalHost, domain);
-  const parts = ["HTTP(S) bereikbaar"];
-  if (redirectedAway) {
-    parts.push(`redirect naar ${finalHost}`);
-  } else {
-    parts.push("geen verdachte host-redirect");
-  }
+  const finalRegistrable = parse(finalHost).domain ?? finalHost;
+  const leaves = finalRegistrable !== parts.registrable;
 
-  // Redirect to a related brand host is informational, not automatically hostile.
-  let positive: boolean | null = true;
-  let delta = 8;
-  if (redirectedAway) {
-    positive = null;
-    delta = 2;
-    parts[1] = `redirect naar gerelateerde host ${finalHost}`;
-  }
-
-  return [
-    {
-      key: "https",
-      label: "HTTPS-gedrag",
-      positive,
-      detail: parts.join("; "),
-      weight: 12,
-      group: "technisch",
-      delta,
-      raw: {
-        finalHost,
-        redirectedAway,
-      },
-    },
-  ];
+  return [{
+    ...base,
+    positive: leaves ? null : true,
+    delta: leaves ? 0 : 4,
+    detail: leaves
+      ? `Bereikbaar; stuurt bezoekers door naar een ander domein: ${finalHost}.`
+      : `Bereikbaar; eindigt op ${finalHost} zonder doorverwijzing naar een ander domein.`,
+    source: "HTTP(S)-verzoek",
+    raw: { finalHost, redirectedAway: leaves },
+  }];
 }

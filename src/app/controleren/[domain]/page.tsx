@@ -11,14 +11,15 @@ import { prisma } from "@/lib/prisma";
 import {
   analyzeDomain,
   groupSignals,
+  parseDomain,
   trustLabelNL,
 } from "@/lib/trust-score";
-import { formatDateNL, normalizeDomain } from "@/lib/utils";
+import { formatDateNL } from "@/lib/utils";
 import { DomainSearch } from "@/components/domain-search";
 import { ScoreRing } from "@/components/trust/score-ring";
 import { SignalStatus } from "@/components/trust/signal-status";
 import { BRAND_NAME } from "@/lib/brand";
-import type { TrustSignal } from "@/lib/trust/types";
+import type { SourceStatus, TrustSignal } from "@/lib/trust/types";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +28,16 @@ function riskHighlights(signals: TrustSignal[]) {
 }
 
 function noticeHighlights(signals: TrustSignal[]) {
-  return signals.filter((s) => s.positive === null && s.key === "spoof");
+  return signals.filter(
+    (s) => s.positive === null && s.key === "spoof" && !s.unavailable,
+  );
 }
+
+const SOURCE_STATUS_NL: Record<SourceStatus["status"], string> = {
+  ok: "Geraadpleegd",
+  unavailable: "Niet bereikbaar",
+  not_configured: "Niet ingeschakeld",
+};
 
 function scoreTone(score: number): "good" | "warn" | "bad" | "neutral" {
   if (score >= 70) return "good";
@@ -46,8 +55,10 @@ export default async function DomainResultPage({
 }) {
   const { domain: raw } = await params;
   const sp = await searchParams;
-  const domain = normalizeDomain(decodeURIComponent(raw));
-  if (!domain || domain.length < 3) notFound();
+  const parts = parseDomain(decodeURIComponent(raw));
+  if (!parts) notFound();
+  const domain = parts.host;
+  const displayDomain = parts.unicodeHost;
 
   const refresh = sp.refresh === "1";
   let dbUnavailable = false;
@@ -60,7 +71,6 @@ export default async function DomainResultPage({
     analysis = await analyzeDomain(domain, { refresh: true, persist: false });
   }
 
-  let lastUpdated = new Date(analysis.collectedAt);
   let reports: {
     id: string;
     title: string;
@@ -75,7 +85,6 @@ export default async function DomainResultPage({
       where: { domain },
     });
     if (profile) {
-      lastUpdated = profile.lastUpdated;
       await prisma.domainProfile.update({
         where: { id: profile.id },
         data: { viewCount: { increment: 1 } },
@@ -115,7 +124,9 @@ export default async function DomainResultPage({
       ? spoof.raw.target
       : null;
   const tone = scoreTone(analysis.score);
-  const positiveCount = analysis.signals.filter((s) => s.positive === true).length;
+  const evaluated = analysis.signals.filter((s) => !s.unavailable);
+  const positiveCount = evaluated.filter((s) => s.positive === true).length;
+  const sourcesOk = analysis.sources.filter((s) => s.status === "ok").length;
 
   return (
     <div className="relative w-full overflow-hidden">
@@ -152,23 +163,30 @@ export default async function DomainResultPage({
                 Trust Score · {BRAND_NAME}
               </p>
               <h1 className="font-display mt-2 break-all text-3xl leading-tight tracking-tight text-ink sm:text-4xl lg:text-5xl">
-                {domain}
+                {displayDomain}
               </h1>
+              {parts.isIdn && (
+                <p className="mt-1 break-all font-mono text-xs text-muted">
+                  Technische schrijfwijze: {domain}
+                </p>
+              )}
               <p className="mt-2 text-sm font-semibold text-ink md:text-base">
                 {trustLabelNL(analysis.label)}
               </p>
               <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-muted md:text-base lg:mx-0">
-                DNS, TLS, RDAP-leeftijd, HTTPS-gedrag, nabootsing en
+                Live gecontroleerd tegen dreigingslijsten, het domeinregister
+                (RDAP), de Tranco-ranglijst, DNS, het TLS-certificaat en
                 community-meldingen. Informatief — geen juridisch oordeel.
               </p>
 
               <div className="mt-6 flex flex-wrap items-center justify-center gap-2 lg:justify-start">
-                <MetaChip label="Signalen" value={String(analysis.signals.length)} />
+                <MetaChip label="Signalen" value={String(evaluated.length)} />
                 <MetaChip label="Positief" value={String(positiveCount)} />
                 <MetaChip label="Risico’s" value={String(risks.length)} />
+                <MetaChip label="Bronnen" value={`${sourcesOk}/${analysis.sources.length}`} />
                 <MetaChip
-                  label="Bijgewerkt"
-                  value={formatDateNL(lastUpdated)}
+                  label="Gescand"
+                  value={formatDateNL(analysis.collectedAt)}
                 />
               </div>
             </div>
@@ -297,6 +315,11 @@ export default async function DomainResultPage({
                       <p className="mx-auto mt-1 max-w-2xl text-sm leading-relaxed text-muted sm:mx-0">
                         {signal.detail}
                       </p>
+                      {signal.source && (
+                        <p className="mt-1.5 text-xs text-muted/80">
+                          Bron: {signal.source}
+                        </p>
+                      )}
                       {signal.key === "spoof" && spoofTarget && (
                         <Link
                           href={`/controleren/${encodeURIComponent(spoofTarget)}`}
@@ -308,7 +331,10 @@ export default async function DomainResultPage({
                       )}
                     </div>
                     <div className="flex shrink-0 justify-center sm:justify-end sm:pt-0.5">
-                      <SignalStatus positive={signal.positive} />
+                      <SignalStatus
+                        positive={signal.positive}
+                        unavailable={signal.unavailable}
+                      />
                     </div>
                   </li>
                 ))}
@@ -316,6 +342,51 @@ export default async function DomainResultPage({
             </section>
           ))}
         </div>
+
+        {/* Sources & method */}
+        <section className="mt-14 rounded-xl border border-line bg-white/60 p-5 md:mt-16 md:p-6">
+          <h2 className="font-display text-xl text-ink md:text-2xl">
+            Bronnen &amp; methode
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">
+            Elke scan haalt de gegevens live op bij onderstaande bronnen. De
+            score start op 50 en elk signaal telt op of af. Een vermelding op
+            een dreigingslijst, sterke merknabootsing of meerdere goedgekeurde
+            meldingen begrenzen de score, ongeacht andere positieve signalen.
+            Bronnen die niet bereikbaar waren tellen niet mee.
+          </p>
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {analysis.sources.map((s) => (
+              <li
+                key={s.name}
+                className="flex items-start justify-between gap-3 rounded-lg border border-line/80 bg-white/70 px-3 py-2.5 text-sm"
+              >
+                <span className="min-w-0">
+                  <span className="block font-medium text-ink">{s.name}</span>
+                  {s.detail && (
+                    <span className="block text-xs text-muted">{s.detail}</span>
+                  )}
+                </span>
+                <span
+                  className={`shrink-0 text-xs font-semibold ${
+                    s.status === "ok" ? "text-trust" : "text-muted"
+                  }`}
+                >
+                  {SOURCE_STATUS_NL[s.status]}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-muted">
+            Gescand op{" "}
+            {new Intl.DateTimeFormat("nl-NL", {
+              dateStyle: "long",
+              timeStyle: "short",
+              timeZone: "Europe/Amsterdam",
+            }).format(new Date(analysis.collectedAt))}
+            {analysis.cached ? " (resultaat uit cache, maximaal 6 uur oud)" : ""}
+          </p>
+        </section>
 
         {/* Related reports */}
         <section className="mt-14 border-t border-line pt-12 md:mt-16 md:pt-14">

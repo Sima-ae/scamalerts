@@ -15,7 +15,10 @@ export function formatDateNL(date: Date | string) {
 
 export function normalizeDomain(input: string): string {
   let value = input.trim().toLowerCase();
-  value = value.replace(/^https?:\/\//, "").replace(/^www\./, "");
-  value = value.split("/")[0]?.split("?")[0] ?? value;
+  value = value.replace(/^[a-z][a-z0-9+.-]*:\/\//, "");
+  value = value.split(/[/?#]/)[0] ?? value;
+  value = value.slice(value.lastIndexOf("@") + 1);
+  value = value.replace(/:\d+$/, "").replace(/\.+$/, "");
+  value = value.replace(/^www\./, "");
   return value;
 }

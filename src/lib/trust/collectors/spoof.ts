@@ -1,482 +1,378 @@
-import { promises as dns } from "dns";
+import { parse } from "tldts";
 import type { TrustSignal } from "@/lib/trust/types";
-import { hostsMatch, resolveRedirectHost } from "@/lib/trust/redirect";
+import type { DomainParts } from "@/lib/trust/domain-parts";
+import { BRANDS, PHISHING_KEYWORDS, officialBrandFor, type Brand } from "@/lib/trust/brands";
 import {
-  brandNeedleHit,
-  generateTypoLabels,
-  isPlausibleTypo,
-  levenshtein,
-  sharesStrongShape,
-  splitDomain,
+  describeEdit,
+  distanceOneVariants,
+  editDistance,
+  lookalikeReadings,
+  segmentsAsBrandPlusKeywords,
+  unicodeSkeleton,
 } from "@/lib/trust/typo-variants";
+import { resolveRedirectHost } from "@/lib/trust/redirect";
+import { getCertificate } from "@/lib/trust/collectors/tls";
+import { ageInDays, lookupRdap } from "@/lib/trust/sources/rdap";
+import type { TrancoList } from "@/lib/trust/sources/tranco";
 
-const resolver = new dns.Resolver();
-resolver.setServers(["1.1.1.1", "8.8.8.8"]);
+/** 3 = strong evidence, 2 = moderate, 1 = weak */
+type Strength = 1 | 2 | 3;
 
-const KNOWN_BRANDS = [
-  { brand: "belastingdienst.nl", needles: ["belastingdienst", "belasting-dienst"] },
-  { brand: "ing.nl", needles: ["ing-", "ingbank", "mijn-ing"] },
-  { brand: "abnamro.nl", needles: ["abn-", "abnamro", "abn-amro"] },
-  { brand: "rabobank.nl", needles: ["rabobank", "rabo-"] },
-  { brand: "bunq.com", needles: ["bunq-", "bunq."] },
-  { brand: "paypal.com", needles: ["paypal-", "pay-pal"] },
-  { brand: "microsoft.com", needles: ["microsoft-", "office365-", "m365-"] },
-  { brand: "apple.com", needles: ["apple-", "icloud-"] },
-  { brand: "apple.nl", needles: ["apple-"] },
-  { brand: "kvk.nl", needles: ["kvk-", "kamer-van-koophandel"] },
-  { brand: "tikkie.me", needles: ["tikkie-", "tikkie."] },
-  { brand: "digid.nl", needles: ["digid-", "digi-d"] },
-  { brand: "marktplaats.nl", needles: ["marktplaats-", "markt-plaats"] },
-  { brand: "postnl.nl", needles: ["postnl-", "post-nl"] },
-  { brand: "bol.com", needles: ["bolcom-", "bol-com"] },
-  { brand: "amazon.com", needles: ["amazon-", "amzn-"] },
-  { brand: "google.com", needles: ["google-", "gmail-"] },
-  { brand: "facebook.com", needles: ["facebook-", "meta-login"] },
-  { brand: "instagram.com", needles: ["instagram-", "insta-"] },
-  { brand: "netflix.com", needles: ["netflix-"] },
-  { brand: "yourhosting.nl", needles: ["yourhosting", "your-hosting"] },
-  { brand: "transip.nl", needles: ["transip", "trans-ip"] },
-  { brand: "hostnet.nl", needles: ["hostnet"] },
-  { brand: "versio.nl", needles: ["versio"] },
-  { brand: "antagonist.nl", needles: ["antagonist"] },
-  { brand: "mijndomein.nl", needles: ["mijndomein", "mijn-domein"] },
-  { brand: "godaddy.com", needles: ["godaddy", "go-daddy"] },
-  { brand: "ideal.nl", needles: ["ideal-login", "idealbetalen"] },
-];
-
-const KNOWN_SET = new Set(KNOWN_BRANDS.map((b) => b.brand));
-const FAMOUS_LABELS = new Set(
-  KNOWN_BRANDS.map((b) => splitDomain(b.brand).label).filter((l) => l.length >= 4),
-);
-
-function normalizeCanonical(host: string): string {
-  const bare = host.toLowerCase().replace(/^www\./, "");
-  if (KNOWN_SET.has(bare)) return bare;
-  return bare;
-}
-
-function isFamousLabel(label: string): boolean {
-  return FAMOUS_LABELS.has(label.toLowerCase());
-}
-
-function needlesForBrandLabel(brandLabel: string): string[] {
-  const out: string[] = [];
-  for (const entry of KNOWN_BRANDS) {
-    if (splitDomain(entry.brand).label === brandLabel) {
-      out.push(...entry.needles);
-    }
-  }
-  return out;
-}
-
-function closestFamousLabel(
-  label: string,
-): { label: string; distance: number } | null {
-  let best: { label: string; distance: number } | null = null;
-  for (const famous of FAMOUS_LABELS) {
-    if (!isPlausibleTypo(label, famous)) continue;
-    const distance = levenshtein(label, famous);
-    if (!best || distance < best.distance) {
-      best = { label: famous, distance };
-    }
-  }
-  return best;
-}
-
-async function resolves(domain: string): Promise<boolean> {
-  try {
-    const a = await resolver.resolve4(domain);
-    return a.length > 0;
-  } catch {
-    try {
-      const aaaa = await resolver.resolve6(domain);
-      return aaaa.length > 0;
-    } catch {
-      return false;
-    }
-  }
-}
-
-async function finalHost(domain: string): Promise<string | null> {
-  return resolveRedirectHost(domain);
-}
-
-function isKnownBrand(domain: string): boolean {
-  return KNOWN_SET.has(domain.toLowerCase());
-}
-
-type Lookalike = {
-  domain: string;
-  distance: number;
-  reason: string;
-  famous: boolean;
-  confidence: "high" | "medium";
+type Finding = {
+  brand: string;
+  target: string;
+  officialDomains: string[];
+  method: "homoglyph" | "subdomain" | "combosquat" | "typosquat" | "tld_swap" | "popular_typo";
+  strength: Strength;
+  evidence: string;
+  /** Brand is not a public registrar, so "registered via <brand>" proves ownership */
+  registrarProof: boolean;
 };
 
-async function findLookalikes(domain: string): Promise<Lookalike[]> {
-  const { label, tld } = splitDomain(domain);
-  if (!tld || label.length < 4) return [];
+/** Brands that sell domain registrations to the public. */
+const PUBLIC_REGISTRAR_BRANDS = new Set(["Amazon", "Google"]);
 
-  const found: Lookalike[] = [];
-  const seen = new Set<string>();
+const SOURCE_BASE = `Merkregister (${BRANDS.length} merken/instanties)`;
 
-  const push = (item: Lookalike) => {
-    if (seen.has(item.domain)) return;
-    seen.add(item.domain);
-    found.push(item);
-  };
-
-  // Brand stem / phishing needles inside the label (secure-bunq-login.nl)
-  for (const entry of KNOWN_BRANDS) {
-    const b = splitDomain(entry.brand);
-    if (!brandNeedleHit(label, b.label, entry.needles)) continue;
-    if (!(await resolves(entry.brand))) continue;
-    push({
-      domain: entry.brand,
-      distance: Math.max(1, levenshtein(label, b.label)),
-      reason: `bevat merksignaal van ${entry.brand}`,
-      famous: true,
-      confidence: "high",
-    });
+function isKeywordish(part: string): boolean {
+  if (PHISHING_KEYWORDS.has(part)) return true;
+  for (let i = 2; i <= part.length - 2; i++) {
+    if (PHISHING_KEYWORDS.has(part.slice(0, i)) && PHISHING_KEYWORDS.has(part.slice(i))) return true;
   }
-
-  // Famous brand labels (cross-TLD): applee.nl → apple.nl / apple.com
-  const famous = closestFamousLabel(label);
-  if (famous) {
-    const shape = sharesStrongShape(label, famous.label);
-    const confidence: "high" | "medium" =
-      famous.distance === 1 || shape ? "high" : "medium";
-    const sameTld = `${famous.label}.${tld}`;
-    if (await resolves(sameTld)) {
-      push({
-        domain: sameTld,
-        distance: famous.distance,
-        reason: `sterke spellingsovereenkomst met bekend merk “${famous.label}”`,
-        famous: true,
-        confidence,
-      });
-    }
-    for (const entry of KNOWN_BRANDS) {
-      const b = splitDomain(entry.brand);
-      if (b.label !== famous.label) continue;
-      if (!(await resolves(entry.brand))) continue;
-      push({
-        domain: entry.brand,
-        distance: famous.distance,
-        reason: `sterke spellingsovereenkomst met ${entry.brand}`,
-        famous: true,
-        confidence,
-      });
-    }
-  }
-
-  // Exact known brand domains — only when typo gate passes
-  for (const entry of KNOWN_BRANDS) {
-    const b = splitDomain(entry.brand);
-    if (!isPlausibleTypo(label, b.label)) continue;
-    const distance = levenshtein(label, b.label);
-    if (!(await resolves(entry.brand))) continue;
-    const needle = brandNeedleHit(label, b.label, entry.needles);
-    push({
-      domain: entry.brand,
-      distance,
-      reason: needle
-        ? `bevat merksignaal van ${entry.brand}`
-        : "bekend merk met zeer vergelijkbare spelling",
-      famous: true,
-      confidence: distance === 1 || needle ? "high" : "medium",
-    });
-  }
-
-  // Live DNS on generated typo variants (same TLD)
-  const ranked = generateTypoLabels(label)
-    .map((c) => ({
-      label: c,
-      domain: `${c}.${tld}`,
-      distance: levenshtein(label, c),
-    }))
-    .filter(
-      (c) =>
-        c.distance >= 1 &&
-        c.distance <= 2 &&
-        isPlausibleTypo(label, c.label),
-    )
-    .sort((a, b) => a.distance - b.distance);
-
-  const batchSize = 8;
-  for (let i = 0; i < ranked.length && found.length < 8; i += batchSize) {
-    const batch = ranked.slice(i, i + batchSize);
-    const results = await Promise.all(
-      batch.map(async (c) => ({
-        ...c,
-        ok: !seen.has(c.domain) && (await resolves(c.domain)),
-      })),
-    );
-    for (const hit of results) {
-      if (!hit.ok) continue;
-      const famousHit = isFamousLabel(hit.label);
-      push({
-        domain: hit.domain,
-        distance: hit.distance,
-        reason:
-          hit.distance === 1
-            ? "actief domein op 1 typfout afstand"
-            : "actief domein op 2 typfouten afstand met gedeelde structuur",
-        famous: famousHit,
-        confidence: hit.distance === 1 || famousHit ? "high" : "medium",
-      });
-    }
-  }
-
-  return found;
+  return false;
 }
 
-type Authority = {
-  score: number;
-  redirectsTo: string | null;
-  resolves: boolean;
-  known: boolean;
-  famousLabel: boolean;
-};
+function brandFindings(parts: DomainParts): Finding[] {
+  // For IDN labels, compare the de-confused Unicode form, not the xn-- punycode.
+  const idnReading = parts.isIdn ? unicodeSkeleton(parts.unicodeLabel) : null;
+  const label = idnReading ?? parts.siteLabel;
+  const labelParts = label.split("-").filter(Boolean);
+  const subParts = parts.siteSubdomain.split(/[.-]/).filter(Boolean);
+  const keywordInHost = [...labelParts, ...subParts].some(isKeywordish);
 
-async function assessAuthority(domain: string): Promise<Authority> {
-  const { label } = splitDomain(domain);
-  const known = isKnownBrand(domain);
-  const famousLabel = isFamousLabel(label);
-  const dnsOk = await resolves(domain);
-  const dest = dnsOk ? await finalHost(domain) : null;
-  const redirectsTo =
-    dest && !hostsMatch(dest, domain) ? normalizeCanonical(dest) : null;
-
-  let score = 0;
-  if (known) score += 100;
-  if (famousLabel) score += 90;
-  if (dnsOk) score += 20;
-  if (dest) score += 10;
-  if (redirectsTo) score -= 25;
-
-  return { score, redirectsTo, resolves: dnsOk, known, famousLabel };
-}
-
-function safeSignal(domain: string, detail: string, delta = 8): TrustSignal[] {
-  return [
-    {
-      key: "spoof",
-      label: "Merk-/overheidsnabootsing",
-      positive: true,
-      detail,
-      weight: 20,
-      group: "heuristiek",
-      delta,
-      raw: { method: "canonical", domain },
-    },
-  ];
-}
-
-export async function collectSpoof(domain: string): Promise<TrustSignal[]> {
-  const subject = domain.toLowerCase();
-  const subjectLabel = splitDomain(subject).label;
-
-  if (isKnownBrand(subject)) {
-    return safeSignal(
-      subject,
-      "Bekend legitiem merkdomein — geen nabootsing gedetecteerd",
-      10,
-    );
+  const readings = new Set<string>(lookalikeReadings(label));
+  const shortReadings = new Set<string>(lookalikeReadings(label, false));
+  if (idnReading) {
+    readings.add(idnReading);
+    shortReadings.add(idnReading);
   }
-
-  // Exact famous label on this host (apple.nl) counts as canonical for that brand.
-  if (isFamousLabel(subjectLabel) && (await resolves(subject))) {
-    return safeSignal(
-      subject,
-      "Domeinnaam komt overeen met een bekend merk — geen typosquat van een sterker origineel",
-      8,
-    );
-  }
-
-  const subjectAuth = await assessAuthority(subject);
-  const lookalikes = await findLookalikes(subject);
-
-  if (lookalikes.length === 0) {
-    return [
-      {
-        key: "spoof",
-        label: "Merk-/overheidsnabootsing",
-        positive: true,
-        detail:
-          "Geen overtuigende merknabootsing of actief lookalike-domein gevonden",
-        weight: 20,
-        group: "heuristiek",
-        delta: 3,
-        raw: { method: "none", inputResolves: subjectAuth.resolves },
-      },
-    ];
-  }
-
-  const peers = await Promise.all(
-    lookalikes.map(async (l) => ({
-      ...l,
-      auth: await assessAuthority(l.domain),
-      brandLabel: splitDomain(l.domain).label,
-    })),
-  );
-
-  for (const peer of peers) {
-    if (
-      subjectAuth.redirectsTo &&
-      hostsMatch(subjectAuth.redirectsTo, peer.domain)
-    ) {
-      peer.auth.score += 40;
+  // Lookalike readings of individual hyphen parts (rab0bank-login → rabobank)
+  const partReadings = new Map<string, string>();
+  if (labelParts.length > 1) {
+    for (const p of labelParts) {
+      for (const r of lookalikeReadings(p, p.length >= 5)) partReadings.set(r, p);
     }
-    if (peer.auth.redirectsTo && hostsMatch(peer.auth.redirectsTo, subject)) {
-      subjectAuth.score += 50;
-      peer.auth.score -= 30;
-    }
-    // Famous brand always outranks a lookalike that is not famous.
-    if (peer.famous || peer.auth.famousLabel || peer.auth.known) {
-      if (!subjectAuth.famousLabel && !subjectAuth.known) {
-        peer.auth.score += 80;
+  }
+
+  const findings: Finding[] = [];
+
+  for (const brand of BRANDS) {
+    const registrarProof = brand.sector !== "hosting" && !PUBLIC_REGISTRAR_BRANDS.has(brand.name);
+    const add = (f: Omit<Finding, "brand" | "target" | "officialDomains" | "registrarProof">) =>
+      findings.push({ ...f, brand: brand.name, target: brand.domains[0]!, officialDomains: brand.domains, registrarProof });
+
+    for (const { t: token, keywordOnly } of brand.tokens) {
+      const distinctive = !keywordOnly && token.length >= 4;
+
+      // Reads as the brand through lookalike characters (pаypal, paypa1, rnicrosoft)
+      if (token.length >= 3 && (token.length >= 5 ? readings : shortReadings).has(token)) {
+        add({
+          method: "homoglyph",
+          strength: 3,
+          evidence: parts.isIdn
+            ? `de naam “${parts.unicodeLabel}” bevat tekens uit een ander schrift die eruitzien als “${token}”`
+            : `“${label}” leest als “${token}” door gelijkende tekens`,
+        });
+        continue;
+      }
+      const lookalikePart = partReadings.get(token);
+      if (lookalikePart && token.length >= 3 && (distinctive || keywordInHost)) {
+        add({
+          method: "homoglyph",
+          strength: keywordInHost ? 3 : 2,
+          evidence: `“${lookalikePart}” leest als “${token}” door gelijkende tekens`,
+        });
+        continue;
+      }
+
+      // Brand in the subdomain on someone else's domain (paypal.com.secure-check.xyz)
+      const officialInSub = brand.domains.find((d) => `.${parts.siteSubdomain}.`.includes(`.${d}.`));
+      if (officialInSub) {
+        add({ method: "subdomain", strength: 3, evidence: `het officiële adres “${officialInSub}” staat vooraan in een ander domein` });
+        continue;
+      }
+      if (subParts.includes(token) && (distinctive || keywordInHost)) {
+        add({
+          method: "subdomain",
+          strength: keywordInHost ? 3 : 2,
+          evidence: `merknaam “${token}” als subdomein op een domein dat niet van ${brand.name} is`,
+        });
+        continue;
+      }
+
+      // Same name under another extension (paypal.nl when the brand uses paypal.com)
+      if (label === token) {
+        if (!keywordOnly && token.length >= 4) {
+          add({ method: "tld_swap", strength: 2, evidence: `zelfde naam als ${brand.domains[0]}, maar onder een andere extensie` });
+        }
+        continue;
+      }
+
+      // Brand + keywords, hyphenated (ing-inloggen) or concatenated (paypallogin)
+      if (labelParts.length > 1 && labelParts.includes(token)) {
+        if (keywordInHost) {
+          add({ method: "combosquat", strength: 3, evidence: `merknaam “${token}” gecombineerd met termen die vaak in phishing voorkomen` });
+        } else if (distinctive) {
+          add({ method: "combosquat", strength: 2, evidence: `bevat de merknaam “${token}”` });
+        }
+        continue;
+      }
+      const concatHit = labelParts.some((p) =>
+        segmentsAsBrandPlusKeywords(p, token, PHISHING_KEYWORDS, token.length < 5),
+      );
+      if (concatHit) {
+        add({ method: "combosquat", strength: 3, evidence: `merknaam “${token}” vastgeplakt aan termen die vaak in phishing voorkomen` });
+        continue;
+      }
+
+      // Typo of the brand name
+      if (keywordOnly || token.length < 4) continue;
+      const maxDistance = token.length >= 10 ? 2 : 1;
+      const candidates = labelParts.length > 1 ? [label, ...labelParts] : [label];
+      for (const candidate of candidates) {
+        if (Math.abs(candidate.length - token.length) > maxDistance) continue;
+        const d = editDistance(candidate, token);
+        if (d < 1 || d > maxDistance) continue;
+        const whole = candidate === label;
+        // Short brand names collide with ordinary words (knab/knap), so a
+        // single edit on its own is only weak evidence for them.
+        const strength: Strength =
+          !whole && keywordInHost ? 3
+          : token.length >= 6 ? (whole ? 3 : 2)
+          : token.length === 5 ? 2
+          : 1;
+        add({ method: "typosquat", strength, evidence: `${describeEdit(candidate, token)} ten opzichte van “${token}”` });
+        break;
       }
     }
-    // Downgrade weak medium-confidence name hits versus an independent active site
-    if (peer.confidence === "medium" && subjectAuth.resolves) {
-      peer.auth.score -= 35;
+  }
+  return findings;
+}
+
+function trancoFindings(parts: DomainParts, tranco: TrancoList): Finding[] {
+  const idnReading = parts.isIdn ? unicodeSkeleton(parts.unicodeLabel) : null;
+  const label = idnReading ?? parts.siteLabel;
+  if (label.length < 5) return [];
+  const own = parts.registrablePrivate;
+  const findings: Finding[] = [];
+  const asFinding = (hit: { domain: string; rank: number }, method: Finding["method"], strength: Strength, evidence: string): Finding => ({
+    brand: hit.domain,
+    target: hit.domain,
+    officialDomains: [hit.domain],
+    method,
+    strength,
+    evidence: `${evidence} (Tranco #${hit.rank.toLocaleString("nl-NL")})`,
+    registrarProof: false,
+  });
+
+  const readings = new Set<string>(lookalikeReadings(label));
+  if (idnReading) readings.add(idnReading);
+  for (const r of readings) {
+    const hit = tranco.byLabel(r);
+    if (hit && hit.domain !== own) {
+      const strength: Strength = r === idnReading ? 3 : 2;
+      findings.push(asFinding(hit, "homoglyph", strength, `“${parts.unicodeLabel}” leest als “${r}”`));
     }
   }
 
-  peers.sort((a, b) => b.auth.score - a.auth.score);
-  const best = peers[0]!;
+  let best: { domain: string; rank: number; variant: string } | null = null;
+  for (const v of distanceOneVariants(label)) {
+    if (v.length < 5) continue;
+    const hit = tranco.byLabel(v);
+    if (!hit || hit.domain === own || hit.rank > 10_000) continue;
+    if (!best || hit.rank < best.rank) best = { ...hit, variant: v };
+  }
+  if (best) {
+    findings.push(asFinding(best, "popular_typo", 1, `${describeEdit(label, best.variant)} ten opzichte van ${best.domain}`));
+  }
+  return findings;
+}
 
-  if (
-    subjectAuth.redirectsTo &&
-    (hostsMatch(subjectAuth.redirectsTo, best.domain) ||
-      isKnownBrand(subjectAuth.redirectsTo) ||
-      isFamousLabel(splitDomain(subjectAuth.redirectsTo).label))
-  ) {
-    const dest = isKnownBrand(subjectAuth.redirectsTo)
-      ? subjectAuth.redirectsTo
-      : best.domain;
-    return [
-      {
-        key: "spoof",
-        label: "Merk-/overheidsnabootsing",
-        positive: null,
-        detail: `Geen zelfstandige scam-site: dit domein verwijst door naar ${dest}. Score blijft voorzichtig-neutraal — controleer altijd of je op het echte merkdomein uitkomt.`,
-        weight: 18,
-        group: "heuristiek",
-        delta: 38,
-        raw: {
-          target: dest,
-          method: "redirect_alias",
-          inputResolves: subjectAuth.resolves,
-          distance: best.distance,
-          subjectScore: subjectAuth.score,
-          peerScore: best.auth.score,
-        },
-      },
-    ];
+function signal(
+  positive: boolean | null,
+  delta: number,
+  detail: string,
+  source: string,
+  raw: Record<string, unknown>,
+): TrustSignal[] {
+  return [{
+    key: "spoof",
+    label: "Merk- en domeinnabootsing",
+    positive,
+    detail,
+    weight: 24,
+    group: "heuristiek",
+    delta,
+    source,
+    raw,
+  }];
+}
+
+function registrableOf(host: string): string | null {
+  return parse(host).domain ?? null;
+}
+
+function words(value: string): string[] {
+  return value.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+}
+
+function orgMatchesBrand(org: string, brand: string): boolean {
+  const orgWords = words(org);
+  const brandWords = words(brand.replace(/\.[a-z]+$/, ""));
+  if (!brandWords.length) return false;
+  for (let i = 0; i + brandWords.length <= orgWords.length; i++) {
+    if (brandWords.every((w, j) => orgWords[i + j] === w)) return true;
+  }
+  return false;
+}
+
+/**
+ * CA-validated proof that the lookalike belongs to the brand: its valid
+ * certificate also covers an official brand host, or is an OV/EV
+ * certificate issued to the brand's organisation.
+ */
+async function sharedOwnership(
+  parts: DomainParts,
+  best: Finding,
+  registrar: string | null,
+): Promise<string | null> {
+  if (best.registrarProof && registrar && orgMatchesBrand(registrar, best.brand)) {
+    return `het domein is geregistreerd via ${registrar}, ${best.brand} zelf`;
+  }
+  const hosts = parts.host === parts.registrable ? [parts.host, `www.${parts.host}`] : [parts.host];
+  for (const host of hosts) {
+    const cert = await getCertificate(host);
+    if (!cert?.authorized) continue;
+    const covered = cert.san.find((name) => {
+      const n = name.replace(/^\*\./, "");
+      return best.officialDomains.some((d) => n === d || n.endsWith(`.${d}`));
+    });
+    if (covered) {
+      return `het geldige TLS-certificaat van dit domein dekt ook ${covered}, een adres van ${best.brand}`;
+    }
+    if (cert.subjectOrg && orgMatchesBrand(cert.subjectOrg, best.brand)) {
+      return `het TLS-certificaat is door ${cert.issuer} gevalideerd en uitgegeven aan ${cert.subjectOrg}`;
+    }
+  }
+  return null;
+}
+
+export async function collectSpoof(
+  parts: DomainParts,
+  tranco: TrancoList | null,
+): Promise<TrustSignal[]> {
+  const source = tranco ? `${SOURCE_BASE} · Tranco-lijst ${tranco.listId}` : SOURCE_BASE;
+
+  const official: Brand | null = parts.onPlatform ? null : officialBrandFor(parts.registrable);
+  if (official) {
+    return signal(true, 10, `Officieel domein van ${official.name}.`, SOURCE_BASE, {
+      method: "official",
+      brand: official.name,
+    });
   }
 
-  const peerIsFamousBrand =
-    best.famous || best.auth.famousLabel || best.auth.known;
-  const subjectIsFamous = subjectAuth.famousLabel || subjectAuth.known;
-  const needle = brandNeedleHit(
-    subjectLabel,
-    best.brandLabel,
-    needlesForBrandLabel(best.brandLabel),
+  const findings = brandFindings(parts);
+  if (tranco) findings.push(...trancoFindings(parts, tranco));
+
+  if (findings.length === 0) {
+    return signal(
+      true,
+      2,
+      tranco
+        ? `Geen gelijkenis gevonden met ${BRANDS.length} vaak nagebootste merken en instanties of met de ${tranco.size.toLocaleString("nl-NL")} meest bezochte sites.`
+        : `Geen gelijkenis gevonden met ${BRANDS.length} vaak nagebootste merken en instanties. De vergelijking met populaire sites (Tranco) was nu niet beschikbaar.`,
+      source,
+      { method: "none" },
+    );
+  }
+
+  findings.sort((a, b) => b.strength - a.strength);
+  const best = findings[0]!;
+
+  // Independent evidence of legitimacy weakens a name-only resemblance.
+  const rank = parts.onPlatform ? null : (tranco?.rank(parts.registrable) ?? null);
+  const rdap = parts.onPlatform ? null : await lookupRdap(parts.registrable);
+  const registeredAt = rdap?.status === "found" ? rdap.registeredAt : null;
+  const age = registeredAt ? ageInDays(registeredAt) : null;
+
+  const context: string[] = [];
+  let level: number = best.strength;
+  if (rank !== null) {
+    level -= 2;
+    context.push(`dit domein staat zelf op Tranco #${rank.toLocaleString("nl-NL")}`);
+  } else if (age !== null && age >= 5 * 365) {
+    level -= 1;
+    context.push(`dit domein is al sinds ${registeredAt!.getFullYear()} geregistreerd`);
+  }
+  if (age !== null && age < 90) {
+    level = Math.min(3, level + 1);
+    context.push(`het domein is pas ${age} dagen oud`);
+  }
+  if (rdap?.status === "not_found") {
+    context.push("het domein is momenteel niet geregistreerd");
+  }
+  if (rdap?.status === "unavailable") {
+    context.push("het domeinregister was niet bereikbaar, dus leeftijd en registrar konden niet worden meegewogen");
+  }
+
+  const finalHost = await resolveRedirectHost(parts.host);
+  const finalRegistrable = finalHost ? registrableOf(finalHost) : null;
+  if (finalRegistrable && finalRegistrable !== parts.registrable && best.officialDomains.includes(finalRegistrable)) {
+    return signal(
+      null,
+      0,
+      `Verwijst door naar ${finalRegistrable}, het officiële domein van ${best.brand}. Zo'n doorverwijzing is meestal in beheer van het merk zelf; controleer na het klikken altijd de adresbalk.`,
+      source,
+      { method: "redirect_alias", target: finalRegistrable, brand: best.brand },
+    );
+  }
+
+  const owned = await sharedOwnership(
+    parts,
+    best,
+    rdap?.status === "found" ? rdap.registrar : null,
   );
-  const plausible = isPlausibleTypo(subjectLabel, best.brandLabel) || needle;
-
-  // Only hard-flag famous brands on high-confidence evidence
-  // (single edit, brand needle, or strong shared shape — not loose distance-2).
-  const forceTyposquat =
-    peerIsFamousBrand &&
-    !subjectIsFamous &&
-    plausible &&
-    best.confidence === "high" &&
-    (best.distance === 1 ||
-      needle ||
-      sharesStrongShape(subjectLabel, best.brandLabel));
-
-  if (!forceTyposquat && subjectAuth.score >= best.auth.score) {
-    if (
-      best.auth.redirectsTo &&
-      hostsMatch(best.auth.redirectsTo, subject)
-    ) {
-      return safeSignal(
-        subject,
-        `Actief lookalike ${best.domain} verwijst terug naar dit domein — dit lijkt het origineel`,
-        8,
-      );
-    }
-    return safeSignal(
-      subject,
-      "Geen overtuigende nabootsing van een sterker merkdomein gevonden",
+  if (owned) {
+    return signal(
+      true,
       5,
+      `Lijkt op ${best.brand === best.target ? best.target : `${best.brand} (${best.target})`}, maar is aantoonbaar van dezelfde eigenaar: ${owned}.`,
+      `${source} · TLS-certificaat`,
+      { method: "brand_owned", target: best.target, brand: best.brand, evidence: owned },
     );
   }
 
-  // Medium-only famous hit without force evidence → informational, not a risk
-  if (peerIsFamousBrand && !forceTyposquat && best.confidence !== "high") {
-    return [
-      {
-        key: "spoof",
-        label: "Merk-/overheidsnabootsing",
-        positive: true,
-        detail:
-          "Geen overtuigende merknabootsing: zwakke spellingsovereenkomsten met bekende merken zijn genegeerd",
-        weight: 20,
-        group: "heuristiek",
-        delta: 3,
-        raw: {
-          method: "weak_filtered",
-          considered: best.domain,
-          distance: best.distance,
-          confidence: best.confidence,
-        },
-      },
-    ];
+  const raw = {
+    method: best.method,
+    target: best.target,
+    brand: best.brand,
+    strength: best.strength,
+    level,
+    evidence: best.evidence,
+    tranco_rank: rank,
+    age_days: age,
+  };
+  const ctx = context.length ? ` Context: ${context.join("; ")}.` : "";
+  const who = best.brand === best.target ? best.target : `${best.brand} (${best.target})`;
+
+  if (level >= 3) {
+    return signal(false, -45, `Sterke aanwijzing voor nabootsing van ${who}: ${best.evidence}.${ctx}`, source, { ...raw, verdict: "high" });
   }
-
-  if (!forceTyposquat && !peerIsFamousBrand) {
-    return safeSignal(
-      subject,
-      "Geen sterkere lookalike gevonden; dit domein lijkt geen nabootsing",
-      5,
-    );
+  if (level === 2) {
+    return signal(false, -20, `Mogelijke nabootsing van ${who}: ${best.evidence}.${ctx} Ga na of je echt met ${best.brand} te maken hebt.`, source, { ...raw, verdict: "medium" });
   }
-
-  const inactiveNote = subjectAuth.resolves
-    ? ""
-    : " Het gecontroleerde domein lijkt daarnaast niet actief (geen DNS).";
-
-  let delta = -28;
-  if (!subjectAuth.resolves) delta = -34;
-  if (forceTyposquat) {
-    delta = subjectAuth.resolves ? -55 : -60;
+  if (level === 1) {
+    return signal(null, 0, `Lijkt op ${who}: ${best.evidence}.${ctx} Op zichzelf geen bewijs van nabootsing.`, source, { ...raw, verdict: "low" });
   }
-
-  return [
-    {
-      key: "spoof",
-      label: "Merk-/overheidsnabootsing",
-      positive: false,
-      detail: `Sterke aanwijzing voor typosquat van ${best.domain} (${best.reason}).${inactiveNote}`,
-      weight: 24,
-      group: "heuristiek",
-      delta,
-      raw: {
-        target: best.domain,
-        method: "typosquat",
-        reason: best.reason,
-        inputResolves: subjectAuth.resolves,
-        distance: best.distance,
-        confidence: best.confidence,
-        subjectScore: subjectAuth.score,
-        peerScore: best.auth.score,
-        forceTyposquat,
-        needle,
-      },
-    },
-  ];
+  return signal(true, 0, `Geen aanwijzing voor nabootsing: ${context[0] ?? "dit domein is zelfstandig gevestigd"}. De naam lijkt wel op ${who}.`, source, { ...raw, verdict: "dismissed" });
 }

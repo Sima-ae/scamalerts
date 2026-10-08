@@ -27,14 +27,18 @@ export async function POST(req: Request) {
     let identifierValue: string | undefined;
 
     if (data.domain?.trim()) {
-      const domain = normalizeDomain(data.domain);
-      // Reuse cached analysis (24h) — analyzeDomain persists DomainProfile.
-      await analyzeDomain(domain);
-      const profile = await prisma.domainProfile.findUnique({
-        where: { domain },
-      });
-      if (profile) {
-        domainId = profile.id;
+      let domain = normalizeDomain(data.domain);
+      // Reuse cached analysis — analyzeDomain persists DomainProfile.
+      // A failed or invalid analysis must not block saving the report.
+      const analysis = await analyzeDomain(domain).catch(() => null);
+      if (analysis) {
+        domain = analysis.domain;
+        const profile = await prisma.domainProfile.findUnique({
+          where: { domain },
+        });
+        if (profile) {
+          domainId = profile.id;
+        }
       }
       identifierType = "domain";
       identifierValue = domain;

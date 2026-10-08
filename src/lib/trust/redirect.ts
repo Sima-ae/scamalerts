@@ -1,21 +1,24 @@
 import http from "http";
 import https from "https";
 import { normalizeDomain } from "@/lib/utils";
+import { memo } from "@/lib/trust/cache";
 
 /**
  * Follow redirects with lax TLS so parked/typo domains that share a
  * brand redirect cert still reveal their final host.
  */
-export async function resolveRedirectHost(
+export function resolveRedirectHost(
   domain: string,
   timeoutMs = 4500,
 ): Promise<string | null> {
-  const urls = [`https://${domain}/`, `http://${domain}/`];
-  for (const start of urls) {
-    const host = await follow(start, timeoutMs);
-    if (host) return host;
-  }
-  return null;
+  return memo(`redirect:${domain}`, 10 * 60 * 1000, async () => {
+    const urls = [`https://${domain}/`, `http://${domain}/`];
+    for (const start of urls) {
+      const host = await follow(start, timeoutMs);
+      if (host) return host;
+    }
+    return null;
+  });
 }
 
 function follow(startUrl: string, timeoutMs: number): Promise<string | null> {

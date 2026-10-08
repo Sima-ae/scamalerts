@@ -1,236 +1,138 @@
-/** Generate likely typosquat / mistype candidates for a domain label (no TLD). */
+import { ASCII_LOOKALIKES, UNICODE_CONFUSABLES } from "@/lib/trust/brands";
 
-const KEYBOARD_NEAR: Record<string, string> = {
-  a: "sqwz",
-  b: "vghn",
-  c: "xdfv",
-  d: "sfcxe",
-  e: "wrsdf",
-  f: "dgcvr",
-  g: "fhtbv",
-  h: "gjynb",
-  i: "ujko",
-  j: "hkunm",
-  k: "jlim",
-  l: "kop",
-  m: "njk",
-  n: "bhjm",
-  o: "iklp",
-  p: "ol",
-  q: "wa",
-  r: "edft",
-  s: "awedxz",
-  t: "rfgy",
-  u: "yhji",
-  v: "cfgb",
-  w: "qase",
-  x: "zsdc",
-  y: "tghu",
-  z: "asx",
-};
-
-export function levenshtein(a: string, b: string): number {
+/** Optimal string alignment distance (Levenshtein + adjacent transposition). */
+export function editDistance(a: string, b: string): number {
   const m = a.length;
   const n = b.length;
-  const dp = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) dp[i]![0] = i;
-  for (let j = 0; j <= n; j++) dp[0]![j] = j;
+  const d = Array.from({ length: m + 1 }, (_, i) => {
+    const row = new Array<number>(n + 1).fill(0);
+    row[0] = i;
+    return row;
+  });
+  for (let j = 0; j <= n; j++) d[0]![j] = j;
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i]![j] = Math.min(
-        dp[i - 1]![j]! + 1,
-        dp[i]![j - 1]! + 1,
-        dp[i - 1]![j - 1]! + cost,
-      );
+      let v = Math.min(d[i - 1]![j]! + 1, d[i]![j - 1]! + 1, d[i - 1]![j - 1]! + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        v = Math.min(v, d[i - 2]![j - 2]! + 1);
+      }
+      d[i]![j] = v;
     }
   }
-  return dp[m]![n]!;
+  return d[m]![n]!;
 }
 
-function commonPrefixLen(a: string, b: string): number {
-  const n = Math.min(a.length, b.length);
-  let i = 0;
-  while (i < n && a[i] === b[i]) i++;
-  return i;
-}
-
-function commonSuffixLen(a: string, b: string): number {
-  const n = Math.min(a.length, b.length);
-  let i = 0;
-  while (i < n && a[a.length - 1 - i] === b[b.length - 1 - i]) i++;
-  return i;
-}
-
-function longestCommonSubsequence(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  const dp = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(0));
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i]![j] =
-        a[i - 1] === b[j - 1]
-          ? dp[i - 1]![j - 1]! + 1
-          : Math.max(dp[i - 1]![j]!, dp[i]![j - 1]!);
+/** Human-readable description of a single edit turning `brand` into `subject`. */
+export function describeEdit(subject: string, brand: string): string {
+  if (subject.length === brand.length) {
+    const diff = [...subject].map((c, i) => (c === brand[i] ? -1 : i)).filter((i) => i >= 0);
+    if (diff.length === 2 && diff[1] === diff[0]! + 1 &&
+        subject[diff[0]!] === brand[diff[1]!] && subject[diff[1]!] === brand[diff[0]!]) {
+      return `letters omgewisseld (“${brand.slice(diff[0], diff[0]! + 2)}” → “${subject.slice(diff[0], diff[0]! + 2)}”)`;
+    }
+    if (diff.length === 1) {
+      return `“${brand[diff[0]!]}” vervangen door “${subject[diff[0]!]}”`;
     }
   }
-  return dp[m]![n]!;
-}
-
-function isKeyboardNear(a: string, b: string): boolean {
-  if (a === b) return true;
-  if (a.length !== 1 || b.length !== 1) return false;
-  const near = KEYBOARD_NEAR[a];
-  return Boolean(near && near.includes(b));
-}
-
-/** True when two labels share a brand-like silhouette (prefix/suffix/LCS/keys). */
-export function sharesStrongShape(aRaw: string, bRaw: string): boolean {
-  const a = aRaw.toLowerCase();
-  const b = bRaw.toLowerCase();
-  if (!a || !b || a === b) return false;
-
-  if (commonPrefixLen(a, b) >= 2) return true;
-  if (commonSuffixLen(a, b) >= 2) return true;
-
-  const minLen = Math.min(a.length, b.length);
-  if (longestCommonSubsequence(a, b) >= minLen - 1) return true;
-
-  // Same length: majority of positions equal or keyboard-adjacent
-  if (a.length === b.length && a.length >= 4) {
-    let close = 0;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] === b[i] || isKeyboardNear(a[i]!, b[i]!)) close++;
+  if (subject.length === brand.length + 1) {
+    for (let i = 0; i < subject.length; i++) {
+      if (subject.slice(0, i) + subject.slice(i + 1) === brand) {
+        return subject[i] === subject[i - 1] || subject[i] === subject[i + 1]
+          ? `letter “${subject[i]}” verdubbeld`
+          : `extra teken “${subject[i]}” toegevoegd`;
+      }
     }
-    if (close / a.length >= 0.75 && a[0] === b[0]) return true;
   }
-
-  return false;
+  if (subject.length + 1 === brand.length) {
+    for (let i = 0; i < brand.length; i++) {
+      if (brand.slice(0, i) + brand.slice(i + 1) === subject) {
+        return `letter “${brand[i]}” weggelaten`;
+      }
+    }
+  }
+  return `${editDistance(subject, brand)} tekens verschil`;
 }
 
-/**
- * Gate weak Levenshtein hits (e.g. bpne ↔ bunq at distance 2).
- * Short brands only allow a single edit; distance-2 needs a shared shape.
- */
-export function isPlausibleTypo(subjectRaw: string, brandRaw: string): boolean {
-  const subject = subjectRaw.toLowerCase().replace(/[^a-z0-9-]/g, "");
-  const brand = brandRaw.toLowerCase().replace(/[^a-z0-9-]/g, "");
-  if (!subject || !brand || subject === brand) return false;
+const ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789-";
 
-  const distance = levenshtein(subject, brand);
-  if (distance < 1) return false;
-
-  const minLen = Math.min(subject.length, brand.length);
-  const maxLen = Math.max(subject.length, brand.length);
-  if (Math.abs(subject.length - brand.length) > 2) return false;
-  if (distance / maxLen > 0.4) return false;
-
-  // 4-letter brands (bunq, digid): only classic single-edit typos
-  if (minLen <= 4) return distance === 1;
-
-  // 5-letter: distance 2 only with strong shared shape
-  if (minLen <= 5) {
-    if (distance === 1) return true;
-    return distance === 2 && sharesStrongShape(subject, brand);
-  }
-
-  if (distance === 1) return true;
-  if (distance === 2) return sharesStrongShape(subject, brand);
-  return false;
-}
-
-/** Brand stem / phishing needle appears inside the label (secure-bunq-login). */
-export function brandNeedleHit(
-  labelRaw: string,
-  brandLabel: string,
-  needles: string[] = [],
-): boolean {
-  const label = labelRaw.toLowerCase();
-  const brand = brandLabel.toLowerCase();
-  if (!label || !brand || label === brand) return false;
-
-  if (brand.length >= 4 && label.includes(brand) && label !== brand) {
-    return true;
-  }
-
-  for (const needle of needles) {
-    const n = needle.toLowerCase().replace(/^\.+|\.+$/g, "");
-    if (!n) continue;
-    if (label.includes(n.replace(/-$/, "")) || label.startsWith(n)) return true;
-  }
-  return false;
-}
-
-/**
- * Generate edit-distance ~1 candidates that often appear in phishing:
- * double-letter removal, deletions, adjacent swaps, nearby keys.
- */
-export function generateTypoLabels(label: string, max = 48): string[] {
-  const base = label.toLowerCase().replace(/[^a-z0-9-]/g, "");
-  if (base.length < 4) return [];
-
+/** Every label at edit distance exactly 1 (OSA) from `label`. */
+export function distanceOneVariants(label: string): Set<string> {
   const out = new Set<string>();
-
-  // Collapse doubled letters: yourhossting → yourhosting
-  for (let i = 0; i < base.length - 1; i++) {
-    if (base[i] === base[i + 1] && /[a-z]/.test(base[i]!)) {
-      out.add(base.slice(0, i) + base.slice(i + 1));
+  for (let i = 0; i < label.length; i++) {
+    out.add(label.slice(0, i) + label.slice(i + 1));
+    for (const c of ALPHABET) {
+      if (c !== label[i]) out.add(label.slice(0, i) + c + label.slice(i + 1));
+    }
+    if (i < label.length - 1 && label[i] !== label[i + 1]) {
+      out.add(label.slice(0, i) + label[i + 1] + label[i] + label.slice(i + 2));
     }
   }
-
-  // Missing letter (common when attacker adds one): delete each char once
-  if (base.length <= 22) {
-    for (let i = 0; i < base.length; i++) {
-      out.add(base.slice(0, i) + base.slice(i + 1));
-    }
+  for (let i = 0; i <= label.length; i++) {
+    for (const c of ALPHABET) out.add(label.slice(0, i) + c + label.slice(i));
   }
-
-  // Adjacent transposition
-  for (let i = 0; i < base.length - 1; i++) {
-    const chars = base.split("");
-    const tmp = chars[i]!;
-    chars[i] = chars[i + 1]!;
-    chars[i + 1] = tmp;
-    out.add(chars.join(""));
-  }
-
-  // Adjacent keyboard substitution (limited)
-  for (let i = 0; i < base.length; i++) {
-    const ch = base[i]!;
-    const near = KEYBOARD_NEAR[ch];
-    if (!near) continue;
-    for (const n of near.slice(0, 3)) {
-      out.add(base.slice(0, i) + n + base.slice(i + 1));
-    }
-  }
-
-  // Hyphen insertion/removal variants for brand-like names
-  if (base.includes("-")) {
-    out.add(base.replace(/-/g, ""));
-  } else if (base.length >= 8 && base.length <= 18) {
-    // try a mid hyphen (cheap heuristic)
-    const mid = Math.floor(base.length / 2);
-    out.add(base.slice(0, mid) + "-" + base.slice(mid));
-  }
-
-  out.delete(base);
-  return [...out]
-    .filter((v) => v.length >= 3 && v.length <= 63 && !v.startsWith("-") && !v.endsWith("-"))
-    .slice(0, max);
+  out.delete(label);
+  return out;
 }
 
-export function splitDomain(domain: string): { label: string; tld: string } {
-  const parts = domain.toLowerCase().split(".");
-  if (parts.length < 2) return { label: domain, tld: "" };
-  // handle co.uk-style lightly: use last two labels when middle is short
-  if (parts.length >= 3 && ["co", "com", "net", "org"].includes(parts[parts.length - 2]!)) {
-    return {
-      label: parts.slice(0, -2).join("."),
-      tld: parts.slice(-2).join("."),
-    };
+/** Map Unicode confusables and diacritics to plain ASCII. */
+export function unicodeSkeleton(label: string): string {
+  return [...label.normalize("NFKD").replace(/\p{M}/gu, "")]
+    .map((c) => UNICODE_CONFUSABLES[c] ?? c)
+    .join("");
+}
+
+/**
+ * Labels this label could be read as through ASCII lookalikes
+ * (paypa1 → paypal, rnicrosoft → microsoft). Excludes the label itself.
+ */
+export function lookalikeReadings(label: string, includeLetterSwaps = true): Set<string> {
+  const out = new Set<string>();
+  const isLetterSwap = (from: string) => from === "l" || from === "i";
+  let all = label;
+  for (const [from, to] of ASCII_LOOKALIKES) {
+    if (isLetterSwap(from)) continue;
+    all = all.split(from).join(to);
   }
-  return {
-    label: parts.slice(0, -1).join("."),
-    tld: parts[parts.length - 1]!,
-  };
+  out.add(all);
+  for (const [from, to] of ASCII_LOOKALIKES) {
+    if (!includeLetterSwaps && isLetterSwap(from)) continue;
+    let idx = label.indexOf(from);
+    while (idx !== -1) {
+      out.add(label.slice(0, idx) + to + label.slice(idx + from.length));
+      idx = label.indexOf(from, idx + 1);
+    }
+  }
+  out.delete(label);
+  return out;
+}
+
+/**
+ * Can `s` be split entirely into the brand token plus at least one keyword?
+ * `brandAtStartOnly` restricts the brand token to the first segment.
+ */
+export function segmentsAsBrandPlusKeywords(
+  s: string,
+  token: string,
+  keywords: Set<string>,
+  brandAtStartOnly: boolean,
+): boolean {
+  if (s === token || !s.includes(token)) return false;
+  const BRAND = 1;
+  const KW = 2;
+  // reach[i] is a bitmask of the 4 possible (usedBrand, usedKeyword) states
+  const reach = new Array<number>(s.length + 1).fill(0);
+  reach[0] = 1 << 0;
+  for (let i = 0; i < s.length; i++) {
+    for (let st = 0; st < 4; st++) {
+      if (!(reach[i]! & (1 << st))) continue;
+      if (s.startsWith(token, i) && !(brandAtStartOnly && i !== 0)) {
+        reach[i + token.length]! |= 1 << (st | BRAND);
+      }
+      for (let len = 2; len <= 16 && i + len <= s.length; len++) {
+        if (keywords.has(s.slice(i, i + len))) reach[i + len]! |= 1 << (st | KW);
+      }
+    }
+  }
+  return Boolean(reach[s.length]! & (1 << (BRAND | KW)));
 }

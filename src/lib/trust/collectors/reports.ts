@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import type { TrustSignal } from "@/lib/trust/types";
 
+const SOURCE = "Gemodereerde meldingen op dit platform";
+
 export async function collectReports(domain: string): Promise<{
   signals: TrustSignal[];
   reports: {
@@ -24,11 +26,12 @@ export async function collectReports(domain: string): Promise<{
           {
             key: "community",
             label: "Community-meldingen",
-            positive: true,
-            detail: "Nog geen goedgekeurde meldingen voor dit domein",
+            positive: null,
+            detail: "Nog geen goedgekeurde meldingen voor dit domein. Geen meldingen betekent niet automatisch dat een site veilig is.",
             weight: 18,
             group: "community",
-            delta: 4,
+            delta: 0,
+            source: SOURCE,
             raw: { count: 0 },
           },
         ],
@@ -59,9 +62,10 @@ export async function collectReports(domain: string): Promise<{
       ),
     ].slice(0, 3);
 
-    let positive: boolean | null = true;
-    let delta = 4;
-    let detail = "Nog geen goedgekeurde meldingen voor dit domein";
+    let positive: boolean | null = null;
+    let delta = 0;
+    let detail =
+      "Nog geen goedgekeurde meldingen voor dit domein. Geen meldingen betekent niet automatisch dat een site veilig is.";
 
     if (count === 1) {
       positive = false;
@@ -87,6 +91,7 @@ export async function collectReports(domain: string): Promise<{
           weight: 18,
           group: "community",
           delta,
+          source: SOURCE,
           raw: { count, categories },
         },
       ],
@@ -106,10 +111,12 @@ export async function collectReports(domain: string): Promise<{
           key: "community",
           label: "Community-meldingen",
           positive: null,
-          detail: "Meldingen konden nu niet worden geladen",
+          detail: "Meldingen konden nu niet worden geladen.",
           weight: 18,
           group: "community",
           delta: 0,
+          unavailable: true,
+          source: SOURCE,
         },
       ],
       reports: [],

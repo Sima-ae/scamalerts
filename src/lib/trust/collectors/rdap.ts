@@ -1,150 +1,115 @@
 import type { TrustSignal } from "@/lib/trust/types";
-
-type RdapEvent = { eventAction?: string; eventDate?: string };
-type RdapResponse = {
-  events?: RdapEvent[];
-  ldhName?: string;
-  errorCode?: number;
-};
-
-function daysSince(date: Date) {
-  return Math.round((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
-}
+import type { DomainParts } from "@/lib/trust/domain-parts";
+import { ageInDays, lookupRdap } from "@/lib/trust/sources/rdap";
 
 function formatAge(days: number) {
   if (days < 1) return "minder dan 1 dag";
   if (days === 1) return "1 dag";
   if (days < 60) return `${days} dagen`;
   if (days < 730) return `${Math.round(days / 30)} maanden`;
-  return `${Math.round(days / 365)} jaar`;
+  return `${Math.floor(days / 365)} jaar`;
 }
 
-function pickRegistrationDate(events: RdapEvent[] | undefined): Date | null {
-  if (!events?.length) return null;
-  const preferred = ["registration", "registered", "last changed creation"];
-  for (const action of preferred) {
-    const hit = events.find(
-      (e) => e.eventAction?.toLowerCase() === action && e.eventDate,
-    );
-    if (hit?.eventDate) {
-      const d = new Date(hit.eventDate);
-      if (!Number.isNaN(d.getTime())) return d;
-    }
-  }
-  const any = events.find((e) => e.eventDate);
-  if (!any?.eventDate) return null;
-  const d = new Date(any.eventDate);
-  return Number.isNaN(d.getTime()) ? null : d;
+/** Close a sentence without doubling a period from e.g. "B.V." */
+function sentence(text: string): string {
+  return text.endsWith(".") ? text : `${text}.`;
 }
 
-async function fetchRdap(url: string, timeoutMs = 4000): Promise<RdapResponse | null> {
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const res = await fetch(url, {
-      headers: { Accept: "application/rdap+json, application/json" },
-      signal: controller.signal,
-      redirect: "follow",
-    });
-    clearTimeout(timer);
-    if (!res.ok) return null;
-    return (await res.json()) as RdapResponse;
-  } catch {
-    return null;
-  }
-}
+const base = {
+  key: "rdap_age",
+  label: "Domeinregistratie",
+  weight: 16,
+  group: "certificaat" as const,
+};
 
-function rdapEndpointsFor(domain: string): string[] {
-  const tld = domain.split(".").pop()?.toLowerCase() ?? "";
-  const endpoints: string[] = [];
-  if (tld === "nl") {
-    endpoints.push(`https://rdap.sidn.nl/domain/${encodeURIComponent(domain)}`);
-  }
-  // IANA bootstrap / common gTLD RDAP services
-  endpoints.push(`https://rdap.org/domain/${encodeURIComponent(domain)}`);
-  endpoints.push(
-    `https://rdap.verisign.com/com/v1/domain/${encodeURIComponent(domain)}`,
-  );
-  if (tld === "org") {
-    endpoints.push(
-      `https://rdap.publicinterestregistry.org/rdap/domain/${encodeURIComponent(domain)}`,
-    );
-  }
-  return endpoints;
-}
-
-export async function collectRdap(domain: string): Promise<TrustSignal[]> {
-  const endpoints = rdapEndpointsFor(domain);
-  let data: RdapResponse | null = null;
-
-  for (const url of endpoints) {
-    data = await fetchRdap(url);
-    if (data?.events?.length) break;
+export async function collectRdap(parts: DomainParts): Promise<TrustSignal[]> {
+  if (parts.onPlatform) {
+    return [{
+      ...base,
+      positive: null,
+      delta: 0,
+      detail: `Deze site draait op het gedeelde platform ${parts.registrable}. De registratiedatum van het platform zegt niets over deze specifieke site.`,
+      source: "Public Suffix List",
+      raw: { platform: parts.registrable },
+    }];
   }
 
-  if (!data?.events?.length) {
-    return [
-      {
-        key: "rdap_age",
-        label: "Domeinleeftijd (RDAP)",
-        positive: null,
-        detail: "Registratiedatum niet beschikbaar via RDAP",
-        weight: 16,
-        group: "certificaat",
-        delta: 0,
-      },
-    ];
+  const info = await lookupRdap(parts.registrable);
+
+  if (info.status === "unavailable") {
+    return [{
+      ...base,
+      positive: null,
+      delta: 0,
+      unavailable: true,
+      detail: `Registratiegegevens konden niet worden opgehaald (${info.reason}).`,
+      source: "Domeinregister (RDAP/WHOIS)",
+    }];
   }
 
-  const registeredAt = pickRegistrationDate(data.events);
-  if (!registeredAt) {
-    return [
-      {
-        key: "rdap_age",
-        label: "Domeinleeftijd (RDAP)",
-        positive: null,
-        detail: "RDAP-antwoord zonder bruikbare registratiedatum",
-        weight: 16,
-        group: "certificaat",
-        delta: 0,
-      },
-    ];
+  if (info.status === "not_found") {
+    return [{
+      ...base,
+      positive: false,
+      delta: -15,
+      detail: `${parts.registrable} is volgens het register niet geregistreerd. Een adres dat zich als website of afzender voordoet maar niet bestaat, is niet te vertrouwen.`,
+      source: `Domeinregister · ${info.server}`,
+      raw: { registered: false },
+    }];
   }
 
-  const ageDays = Math.max(0, daysSince(registeredAt));
+  const source = `Domeinregister · ${info.server}`;
+  const registrar = info.registrar ? `; registrar: ${info.registrar}` : "";
+  const expires = info.expiresAt ? `; verloopt ${info.expiresAt.toISOString().slice(0, 10)}` : "";
+
+  if (!info.registeredAt) {
+    return [{
+      ...base,
+      positive: null,
+      delta: 0,
+      detail: sentence(`Het register publiceert geen registratiedatum voor dit domein${registrar}${expires}`),
+      source,
+      raw: { registrar: info.registrar },
+    }];
+  }
+
+  const age = ageInDays(info.registeredAt);
+  const date = info.registeredAt.toISOString().slice(0, 10);
+  const facts = `geregistreerd op ${date} (${formatAge(age)} geleden)${registrar}${expires}`;
+
   let positive: boolean | null = true;
-  let delta = 10;
-  let detail = `Geregistreerd ${formatAge(ageDays)} geleden (${registeredAt.toISOString().slice(0, 10)})`;
-
-  if (ageDays <= 7) {
+  let delta = 8;
+  let detail = sentence(`Gevestigd domein: ${facts}`);
+  if (age <= 7) {
     positive = false;
-    delta = -22;
-    detail = `Zeer nieuw domein — geregistreerd ${formatAge(ageDays)} geleden (${registeredAt.toISOString().slice(0, 10)})`;
-  } else if (ageDays <= 30) {
+    delta = -25;
+    detail = `${sentence(`Zeer nieuw domein: ${facts}`)} Veel fraudesites worden kort voor gebruik geregistreerd.`;
+  } else if (age <= 30) {
     positive = false;
-    delta = -14;
-    detail = `Jong domein — geregistreerd ${formatAge(ageDays)} geleden (${registeredAt.toISOString().slice(0, 10)})`;
-  } else if (ageDays <= 180) {
+    delta = -18;
+    detail = sentence(`Jong domein: ${facts}`);
+  } else if (age <= 180) {
     positive = null;
-    delta = -4;
-  } else if (ageDays >= 365 * 3) {
+    delta = -6;
+    detail = sentence(`Relatief nieuw domein: ${facts}`);
+  } else if (age < 365 * 2) {
     positive = true;
+    delta = 4;
+  } else if (age >= 365 * 5) {
     delta = 14;
   }
 
-  return [
-    {
-      key: "rdap_age",
-      label: "Domeinleeftijd (RDAP)",
-      positive,
-      detail,
-      weight: 16,
-      group: "certificaat",
-      delta,
-      raw: {
-        registeredAt: registeredAt.toISOString(),
-        ageDays,
-      },
+  return [{
+    ...base,
+    positive,
+    delta,
+    detail,
+    source,
+    raw: {
+      registeredAt: info.registeredAt.toISOString(),
+      expiresAt: info.expiresAt?.toISOString() ?? null,
+      registrar: info.registrar,
+      ageDays: age,
     },
-  ];
+  }];
 }

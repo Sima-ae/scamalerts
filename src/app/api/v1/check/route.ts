@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
-import { analyzeDomain, trustLabelNL } from "@/lib/trust-score";
-import { normalizeDomain } from "@/lib/utils";
+import {
+  analyzeDomain,
+  InvalidDomainError,
+  trustLabelNL,
+} from "@/lib/trust-score";
 
 async function authorize(req: Request) {
   const key = req.headers.get("x-api-key");
@@ -36,11 +39,21 @@ export async function GET(req: Request) {
   }
 
   const refresh = searchParams.get("refresh") === "1";
-  const analysis = await analyzeDomain(domainParam, { refresh });
-  const domain = normalizeDomain(domainParam);
+  let analysis: Awaited<ReturnType<typeof analyzeDomain>>;
+  try {
+    analysis = await analyzeDomain(domainParam, { refresh });
+  } catch (err) {
+    if (err instanceof InvalidDomainError) {
+      return NextResponse.json(
+        { error: "Geen geldige, registreerbare domeinnaam." },
+        { status: 400 },
+      );
+    }
+    throw err;
+  }
 
   const profile = await prisma.domainProfile.findUnique({
-    where: { domain },
+    where: { domain: analysis.domain },
   });
 
   return NextResponse.json({
@@ -49,6 +62,7 @@ export async function GET(req: Request) {
     label: analysis.label,
     label_nl: trustLabelNL(analysis.label),
     signals: analysis.signals,
+    sources: analysis.sources,
     cached: analysis.cached,
     collected_at: analysis.collectedAt,
     version: analysis.version,
