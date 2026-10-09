@@ -10,8 +10,10 @@ import {
   MeldingenSearch,
   type MeldingenSearchItem,
 } from "@/components/meldingen-search";
-import { loadSubcategoryFilters } from "@/lib/categories";
-import { findTaxonomyBySlug } from "@/content/kennisbank/taxonomy";
+import {
+  KENNISBANK_TAXONOMY,
+  findTaxonomyBySlug,
+} from "@/content/kennisbank/taxonomy";
 
 export const dynamic = "force-dynamic";
 
@@ -86,8 +88,10 @@ export default async function MeldingenPage({
   searchParams: Promise<{ categorie?: string }>;
 }) {
   const sp = await searchParams;
-  const categories = await loadSubcategoryFilters();
   const filter = sp.categorie ? findTaxonomyBySlug(sp.categorie) : null;
+  const topicFilters = KENNISBANK_TAXONOMY.filter(
+    (topic) => topic.slug !== "trust-score",
+  );
 
   const categoryFilter = sp.categorie
     ? filter?.kind === "parent"
@@ -134,28 +138,28 @@ export default async function MeldingenPage({
       }}
     >
       <MeldingenSearch reports={searchReports}>
-        <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2">
+        <div className="mx-auto flex max-w-3xl flex-wrap justify-center gap-1.5">
           <Link
             href="/meldingen"
-            className={`rounded-md px-3 py-1.5 text-sm transition ${
-              !sp.categorie
+            className={`rounded-full px-2.5 py-1 text-xs transition ${
+              !filter
                 ? "bg-ink text-white"
                 : "border border-line bg-white text-ink hover:border-ink/30"
             }`}
           >
             Alles
           </Link>
-          {categories.map((c) => (
+          {topicFilters.map((topic) => (
             <Link
-              key={c.id}
-              href={`/meldingen?categorie=${c.slug}`}
-              className={`rounded-md px-3 py-1.5 text-sm transition ${
-                sp.categorie === c.slug
+              key={topic.slug}
+              href={`/meldingen?categorie=${topic.slug}`}
+              className={`rounded-full px-2.5 py-1 text-xs transition ${
+                filter?.parent.slug === topic.slug
                   ? "bg-ink text-white"
                   : "border border-line bg-white text-ink hover:border-ink/30"
               }`}
             >
-              {c.name}
+              {topic.name}
             </Link>
           ))}
         </div>

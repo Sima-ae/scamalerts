@@ -25,6 +25,7 @@ import {
   ShieldQuestion,
 } from "lucide-react";
 import { homepageTopics } from "@/content/kennisbank/taxonomy";
+import { listCatalogGuides } from "@/lib/kennisbank-catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -76,28 +77,20 @@ const steps = [
   },
 ];
 
-async function loadHomeData() {
-  const [reports, articles] = await Promise.all([
-    prisma.scamReport.findMany({
+async function loadReports() {
+  return prisma.scamReport
+    .findMany({
       where: { status: "APPROVED" },
       include: { domain: true, category: true },
       orderBy: { publishedAt: "desc" },
       take: 6,
-    }),
-    prisma.article.findMany({
-      where: { status: "PUBLISHED" },
-      orderBy: { publishedAt: "desc" },
-      take: 3,
-    }),
-  ]);
-  return { reports, articles };
+    })
+    .catch(() => []);
 }
 
 export default async function HomePage() {
-  const { reports, articles } = await loadHomeData().catch(() => ({
-    reports: [],
-    articles: [],
-  }));
+  const reports = await loadReports();
+  const articles = listCatalogGuides().slice(0, 3);
 
   return (
     <div className="w-full">

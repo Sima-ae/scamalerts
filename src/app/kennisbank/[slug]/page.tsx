@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import type { Metadata } from "next";
 import { BRAND_NAME } from "@/lib/brand";
 import { ArticleBody } from "@/components/kennisbank/article-body";
 import { GuideCard } from "@/components/kennisbank/guide-card";
+import { getCatalogGuide, relatedGuides } from "@/lib/kennisbank-catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +14,11 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = await prisma.article.findUnique({ where: { slug } });
-  if (!article || article.status !== "PUBLISHED") {
-    return { title: "Artikel" };
-  }
+  const article = getCatalogGuide(slug);
+  if (!article) return { title: "Artikel" };
   return {
     title: article.title,
-    description: article.excerpt ?? `${article.title} — ${BRAND_NAME}`,
+    description: article.excerpt || `${article.title} — ${BRAND_NAME}`,
   };
 }
 
@@ -30,38 +28,12 @@ export default async function ArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = await prisma.article.findUnique({
-    where: { slug },
-    include: { category: { include: { parent: true } } },
-  });
-  if (!article || article.status !== "PUBLISHED") notFound();
+  const article = getCatalogGuide(slug);
+  if (!article) notFound();
 
-  const categoryId = article.categoryId;
-  const parentId = article.category?.parentId ?? article.category?.id;
-
-  const related = categoryId
-    ? await prisma.article
-        .findMany({
-          where: {
-            status: "PUBLISHED",
-            id: { not: article.id },
-            OR: [
-              { categoryId },
-              ...(parentId
-                ? [{ category: { parentId } }, { categoryId: parentId }]
-                : []),
-            ],
-          },
-          include: { category: { include: { parent: true } } },
-          orderBy: { publishedAt: "desc" },
-          take: 3,
-        })
-        .catch(() => [])
-    : [];
-
+  const related = relatedGuides(article);
   const isTrustGuide =
-    article.category?.slug === "trust-score" ||
-    article.category?.parent?.slug === "trust-score";
+    article.categorySlug === "trust-score" || article.parentSlug === "trust-score";
 
   return (
     <div className="relative overflow-hidden">
@@ -74,25 +46,25 @@ export default async function ArticlePage({
           >
             Kennisbank
           </Link>
-          {article.category?.parent && (
+          {article.parentSlug && article.parentName && (
             <>
               {" · "}
               <Link
-                href={`/kennisbank?onderwerp=${article.category.parent.slug}`}
+                href={`/kennisbank?onderwerp=${article.parentSlug}`}
                 className="font-semibold text-accent hover:underline"
               >
-                {article.category.parent.name}
+                {article.parentName}
               </Link>
             </>
           )}
-          {article.category && (
+          {article.categoryName && (
             <>
               {" · "}
               <Link
-                href={`/kennisbank?onderwerp=${article.category.slug}`}
+                href={`/kennisbank?onderwerp=${article.categorySlug}`}
                 className="font-semibold text-accent hover:underline"
               >
-                {article.category.name}
+                {article.categoryName}
               </Link>
             </>
           )}
@@ -145,8 +117,8 @@ export default async function ArticlePage({
                 href={`/kennisbank/${item.slug}`}
                 title={item.title}
                 excerpt={item.excerpt}
-                categoryName={item.category?.name}
-                parentName={item.category?.parent?.name}
+                categoryName={item.categoryName}
+                parentName={item.parentName}
               />
             ))}
           </div>

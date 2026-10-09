@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { PageShell } from "@/components/ui/page-shell";
 import { MEDIA } from "@/lib/media";
 import { AnimatedItem } from "@/components/ui/animated-section";
@@ -10,6 +9,11 @@ import {
   KennisbankSearch,
   type KennisbankSearchItem,
 } from "@/components/kennisbank/kennisbank-search";
+import {
+  countGuidesForSlug,
+  guidesForTaxonomy,
+  listCatalogGuides,
+} from "@/lib/kennisbank-catalog";
 import {
   KENNISBANK_TAXONOMY,
   findTaxonomyBySlug,
@@ -41,97 +45,32 @@ export default async function KennisbankPage({
   const sp = await searchParams;
   const filter = sp.onderwerp ? findTaxonomyBySlug(sp.onderwerp) : null;
 
-  const categories = await prisma.category
-    .findMany({
-      include: {
-        children: true,
-        parent: true,
-        _count: { select: { articles: { where: { status: "PUBLISHED" } } } },
-      },
-    })
-    .catch(() => []);
+  const catalog = listCatalogGuides();
+  const articles = filter ? guidesForTaxonomy(filter) : catalog.slice(0, 9);
 
-  const bySlug = new Map(categories.map((c) => [c.slug, c]));
+  const searchArticles: KennisbankSearchItem[] = catalog.map((article) => ({
+    slug: article.slug,
+    title: article.title,
+    excerpt: article.excerpt,
+    categoryName: article.categoryName,
+    parentName: article.parentName,
+    haystack: normalizeSearchText(
+      [
+        article.title,
+        article.excerpt,
+        article.content,
+        article.categoryName ?? "",
+        article.parentName ?? "",
+        article.categorySlug,
+      ].join(" "),
+    ),
+  }));
 
-  const articleWhere = filter
-    ? filter.kind === "parent"
-      ? {
-          status: "PUBLISHED" as const,
-          OR: [
-            { category: { slug: filter.parent.slug } },
-            { category: { parent: { slug: filter.parent.slug } } },
-          ],
-        }
-      : {
-          status: "PUBLISHED" as const,
-          category: { slug: filter.child!.slug },
-        }
-    : { status: "PUBLISHED" as const };
-
-  const [articles, allArticles] = await Promise.all([
-    prisma.article
-      .findMany({
-        where: articleWhere,
-        include: {
-          category: { include: { parent: true } },
-        },
-        orderBy: { publishedAt: "desc" },
-        ...(filter ? {} : { take: 6 }),
-      })
-      .catch(() => []),
-    prisma.article
-      .findMany({
-        where: { status: "PUBLISHED" },
-        select: {
-          slug: true,
-          title: true,
-          excerpt: true,
-          content: true,
-          category: {
-            select: {
-              name: true,
-              parent: { select: { name: true } },
-            },
-          },
-        },
-        orderBy: { publishedAt: "desc" },
-      })
-      .catch(() => []),
-  ]);
-
-  const searchArticles: KennisbankSearchItem[] = allArticles.map((article) => {
-    const categoryName = article.category?.name ?? null;
-    const parentName = article.category?.parent?.name ?? null;
-    return {
-      slug: article.slug,
-      title: article.title,
-      excerpt: article.excerpt,
-      categoryName,
-      parentName,
-      haystack: normalizeSearchText(
-        [
-          article.title,
-          article.excerpt ?? "",
-          article.content,
-          categoryName ?? "",
-          parentName ?? "",
-        ].join(" "),
-      ),
-    };
-  });
-
-  const parentCards = KENNISBANK_TAXONOMY.map((parent) => {
-    const row = bySlug.get(parent.slug);
-    const childCounts = parent.children.reduce((sum, child) => {
-      const childRow = bySlug.get(child.slug);
-      return sum + (childRow?._count.articles ?? 0);
-    }, 0);
-    return {
-      ...parent,
-      articleCount: (row?._count.articles ?? 0) + childCounts,
-      subcategoryCount: parent.children.length,
-    };
-  });
+  const parentCards = KENNISBANK_TAXONOMY.map((parent) => ({
+    ...parent,
+    articleCount: countGuidesForSlug(parent.slug),
+    subcategoryCount: parent.children.length,
+  }));
 
   return (
     <PageShell
@@ -183,8 +122,8 @@ export default async function KennisbankPage({
                     href={`/kennisbank/${article.slug}`}
                     title={article.title}
                     excerpt={article.excerpt}
-                    categoryName={article.category?.name}
-                    parentName={article.category?.parent?.name}
+                    categoryName={article.categoryName}
+                    parentName={article.parentName}
                   />
                 </AnimatedItem>
               ))}
@@ -221,8 +160,8 @@ export default async function KennisbankPage({
                     href={`/kennisbank/${article.slug}`}
                     title={article.title}
                     excerpt={article.excerpt}
-                    categoryName={article.category?.name}
-                    parentName={article.category?.parent?.name}
+                    categoryName={article.categoryName}
+                    parentName={article.parentName}
                   />
                 </AnimatedItem>
               ))}
@@ -274,8 +213,8 @@ export default async function KennisbankPage({
                     href={`/kennisbank/${article.slug}`}
                     title={article.title}
                     excerpt={article.excerpt}
-                    categoryName={article.category?.name}
-                    parentName={article.category?.parent?.name}
+                    categoryName={article.categoryName}
+                    parentName={article.parentName}
                   />
                 </AnimatedItem>
               ))}
