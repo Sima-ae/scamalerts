@@ -400,6 +400,91 @@ a {
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, white);
 }
 
+.site-search {
+  position: relative;
+  width: 100%;
+}
+
+.site-search__icon {
+  position: absolute;
+  top: 50%;
+  left: 1.1rem;
+  z-index: 1;
+  width: 1.15rem;
+  height: 1.15rem;
+  transform: translateY(-50%);
+  color: color-mix(in oklab, var(--muted) 88%, var(--ink));
+  pointer-events: none;
+}
+
+.site-search__input {
+  width: 100%;
+  height: 3.25rem;
+  padding: 0 3rem 0 3rem;
+  border: 1px solid color-mix(in oklab, var(--line) 85%, var(--ink));
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.4;
+  text-align: left;
+  box-shadow: 0 10px 28px -24px rgba(15, 28, 46, 0.45);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.site-search__input::placeholder {
+  color: color-mix(in oklab, var(--muted) 92%, var(--ink));
+}
+
+.site-search__input:hover {
+  border-color: color-mix(in oklab, var(--ink) 18%, var(--line));
+}
+
+.site-search__input:focus {
+  outline: none;
+  border-color: color-mix(in oklab, var(--accent) 55%, var(--line));
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--accent) 16%, white),
+    0 14px 32px -24px rgba(15, 28, 46, 0.4);
+}
+
+.site-search__input::-webkit-search-decoration,
+.site-search__input::-webkit-search-cancel-button,
+.site-search__input::-webkit-search-results-button,
+.site-search__input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.site-search__clear {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  transform: translateY(-50%);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.site-search__clear:hover {
+  background: color-mix(in oklab, var(--surface) 70%, white);
+  color: var(--ink);
+}
+
 .btn-primary {
   display: inline-flex;
   align-items: center;

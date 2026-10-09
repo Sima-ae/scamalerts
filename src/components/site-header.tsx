@@ -6,7 +6,7 @@ import { HeaderFrame } from "@/components/header-frame";
 
 const links = [
   { href: "/controleren", label: "Controleren" },
-  { href: "/meldingen", label: "Meldingen" },
+  { href: "/meldingen", label: "Alle meldingen" },
   { href: "/kennisbank", label: "Kennisbank" },
   { href: "/over-ons", label: "Over ons" },
 ];

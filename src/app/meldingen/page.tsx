@@ -1,10 +1,15 @@
 import Link from "next/link";
+import type { TrustLabel } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatDateNL } from "@/lib/utils";
 import { trustLabelNL } from "@/lib/trust-score";
 import { PageShell } from "@/components/ui/page-shell";
 import { MEDIA } from "@/lib/media";
 import { AnimatedItem } from "@/components/ui/animated-section";
+import {
+  MeldingenSearch,
+  type MeldingenSearchItem,
+} from "@/components/meldingen-search";
 import { loadSubcategoryFilters } from "@/lib/categories";
 import { findTaxonomyBySlug } from "@/content/kennisbank/taxonomy";
 
@@ -15,6 +20,65 @@ export const metadata = {
   description:
     "Bekijk goedgekeurde scam-meldingen op All Scams. Filter op categorie en ontdek actuele trucs in Nederland.",
 };
+
+function normalizeSearchText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function toSearchItem(report: {
+  id: string;
+  title: string;
+  description: string;
+  channel: string | null;
+  identifierValue: string | null;
+  publishedAt: Date | null;
+  createdAt: Date;
+  category: { name: string } | null;
+  domain: {
+    domain: string;
+    trustLabel: TrustLabel;
+    trustScore: number;
+  } | null;
+}): MeldingenSearchItem {
+  const categoryName = report.category?.name ?? null;
+  const domainName = report.domain?.domain ?? null;
+  const dateLabel = report.publishedAt
+    ? formatDateNL(report.publishedAt)
+    : formatDateNL(report.createdAt);
+  const meta = [dateLabel, categoryName, report.channel]
+    .filter(Boolean)
+    .join(" · ");
+
+  const domainLabel =
+    report.domain != null
+      ? `${report.domain.domain} · ${trustLabelNL(report.domain.trustLabel)} (${report.domain.trustScore}/100)`
+      : null;
+
+  return {
+    id: report.id,
+    title: report.title,
+    description: report.description,
+    meta,
+    domain: domainName,
+    domainLabel,
+    haystack: normalizeSearchText(
+      [
+        report.title,
+        report.description,
+        categoryName ?? "",
+        report.channel ?? "",
+        domainName ?? "",
+        report.identifierValue ?? "",
+      ].join(" "),
+    ),
+  };
+}
 
 export default async function MeldingenPage({
   searchParams,
@@ -36,17 +100,28 @@ export default async function MeldingenPage({
       : { category: { slug: sp.categorie } }
     : {};
 
-  const reports = await prisma.scamReport
-    .findMany({
-      where: {
-        status: "APPROVED",
-        ...categoryFilter,
-      },
-      include: { domain: true, category: true },
-      orderBy: { publishedAt: "desc" },
-      take: 50,
-    })
-    .catch(() => []);
+  const [reports, allReports] = await Promise.all([
+    prisma.scamReport
+      .findMany({
+        where: {
+          status: "APPROVED",
+          ...categoryFilter,
+        },
+        include: { domain: true, category: true },
+        orderBy: { publishedAt: "desc" },
+        take: 50,
+      })
+      .catch(() => []),
+    prisma.scamReport
+      .findMany({
+        where: { status: "APPROVED" },
+        include: { domain: true, category: true },
+        orderBy: { publishedAt: "desc" },
+      })
+      .catch(() => []),
+  ]);
+
+  const searchReports = allReports.map(toSearchItem);
 
   return (
     <PageShell
@@ -58,71 +133,73 @@ export default async function MeldingenPage({
         media: MEDIA.community,
       }}
     >
-      <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2">
-        <Link
-          href="/meldingen"
-          className={`rounded-md px-3 py-1.5 text-sm transition ${
-            !sp.categorie
-              ? "bg-ink text-white"
-              : "border border-line bg-white text-ink hover:border-ink/30"
-          }`}
-        >
-          Alles
-        </Link>
-        {categories.map((c) => (
+      <MeldingenSearch reports={searchReports}>
+        <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2">
           <Link
-            key={c.id}
-            href={`/meldingen?categorie=${c.slug}`}
+            href="/meldingen"
             className={`rounded-md px-3 py-1.5 text-sm transition ${
-              sp.categorie === c.slug
+              !sp.categorie
                 ? "bg-ink text-white"
                 : "border border-line bg-white text-ink hover:border-ink/30"
             }`}
           >
-            {c.name}
+            Alles
           </Link>
-        ))}
-      </div>
+          {categories.map((c) => (
+            <Link
+              key={c.id}
+              href={`/meldingen?categorie=${c.slug}`}
+              className={`rounded-md px-3 py-1.5 text-sm transition ${
+                sp.categorie === c.slug
+                  ? "bg-ink text-white"
+                  : "border border-line bg-white text-ink hover:border-ink/30"
+              }`}
+            >
+              {c.name}
+            </Link>
+          ))}
+        </div>
 
-      <div className="mx-auto mt-10 max-w-3xl divide-y divide-line text-center">
-        {reports.map((report, i) => (
-          <AnimatedItem key={report.id} delay={Math.min(i, 5) * 0.04}>
-            <article className="interactive-row rounded-lg px-2 py-6 md:px-4">
-              <p className="text-xs text-muted">
-                {report.publishedAt
-                  ? formatDateNL(report.publishedAt)
-                  : formatDateNL(report.createdAt)}
-                {report.category ? ` · ${report.category.name}` : ""}
-                {report.channel ? ` · ${report.channel}` : ""}
-              </p>
-              <h2 className="mt-1 text-xl font-semibold text-ink">
-                {report.title}
-              </h2>
-              <p className="mx-auto mt-2 max-w-3xl text-sm leading-relaxed text-muted">
-                {report.description}
-              </p>
-              {report.domain && (
-                <div className="mt-3 flex justify-center">
-                  <Link
-                    href={`/controleren/${report.domain.domain}`}
-                    className="text-sm font-semibold text-accent hover:underline"
-                  >
-                    {report.domain.domain} ·{" "}
-                    {trustLabelNL(report.domain.trustLabel)} (
-                    {report.domain.trustScore}/100)
-                  </Link>
-                </div>
-              )}
-            </article>
-          </AnimatedItem>
-        ))}
-        {reports.length === 0 && (
-          <p className="py-10 text-muted">
-            Binnenkort gaat de vernieuwde versie voor alle meldingen en scams
-            melden online.
-          </p>
-        )}
-      </div>
+        <div className="mx-auto mt-10 max-w-3xl divide-y divide-line text-center">
+          {reports.map((report, i) => (
+            <AnimatedItem key={report.id} delay={Math.min(i, 5) * 0.04}>
+              <article className="interactive-row rounded-lg px-2 py-6 md:px-4">
+                <p className="text-xs text-muted">
+                  {report.publishedAt
+                    ? formatDateNL(report.publishedAt)
+                    : formatDateNL(report.createdAt)}
+                  {report.category ? ` · ${report.category.name}` : ""}
+                  {report.channel ? ` · ${report.channel}` : ""}
+                </p>
+                <h2 className="mt-1 text-xl font-semibold text-ink">
+                  {report.title}
+                </h2>
+                <p className="mx-auto mt-2 max-w-3xl text-sm leading-relaxed text-muted">
+                  {report.description}
+                </p>
+                {report.domain && (
+                  <div className="mt-3 flex justify-center">
+                    <Link
+                      href={`/controleren/${report.domain.domain}`}
+                      className="text-sm font-semibold text-accent hover:underline"
+                    >
+                      {report.domain.domain} ·{" "}
+                      {trustLabelNL(report.domain.trustLabel)} (
+                      {report.domain.trustScore}/100)
+                    </Link>
+                  </div>
+                )}
+              </article>
+            </AnimatedItem>
+          ))}
+          {reports.length === 0 && (
+            <p className="py-10 text-muted">
+              Binnenkort gaat de vernieuwde versie voor alle meldingen en scams
+              melden online.
+            </p>
+          )}
+        </div>
+      </MeldingenSearch>
     </PageShell>
   );
 }
