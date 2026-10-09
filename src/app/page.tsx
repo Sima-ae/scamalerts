@@ -103,7 +103,7 @@ export default async function HomePage() {
     <div className="w-full">
       <section className="hero-plane relative w-full">
         <MediaFrame media={MEDIA.hero} priority overlay="ink" />
-        <div className="section-shell relative z-10 grid items-center gap-10 py-12 md:min-h-[min(calc(100svh-9.75rem+40px),820px)] md:gap-12 md:py-16 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
+        <div className="section-shell relative z-10 grid items-center gap-10 py-12 md:min-h-[min(calc(100svh-9.75rem+30px),810px)] md:gap-12 md:py-16 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
           <div className="mx-auto w-full max-w-3xl text-center lg:mx-0 lg:text-left">
             <h1 className="animate-rise mx-auto max-w-xl text-xl font-medium text-white md:text-2xl lg:mx-0">
               Weet je zeker dat die website te vertrouwen is?

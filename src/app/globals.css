@@ -290,7 +290,7 @@ a {
 .hero-plane {
   position: relative;
   overflow: hidden;
-  min-height: min(calc(100svh - 9.75rem + 40px), 820px);
+  min-height: min(calc(100svh - 9.75rem + 30px), 810px);
   color: #f5f7fa;
   background: #0f1c2e;
 }
