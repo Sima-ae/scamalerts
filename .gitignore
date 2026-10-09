@@ -42,3 +42,6 @@ next-env.d.ts
 
 # trust data caches
 /.cache/
+
+# user-uploaded report evidence
+/uploads/

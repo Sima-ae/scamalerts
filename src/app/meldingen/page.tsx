@@ -58,7 +58,7 @@ export default async function MeldingenPage({
         media: MEDIA.community,
       }}
     >
-      <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2 md:max-w-none md:justify-start">
+      <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2">
         <Link
           href="/meldingen"
           className={`rounded-md px-3 py-1.5 text-sm transition ${
@@ -84,25 +84,25 @@ export default async function MeldingenPage({
         ))}
       </div>
 
-      <div className="mx-auto mt-10 max-w-3xl divide-y divide-line md:mx-0 md:max-w-none">
+      <div className="mx-auto mt-10 max-w-3xl divide-y divide-line text-center">
         {reports.map((report, i) => (
           <AnimatedItem key={report.id} delay={Math.min(i, 5) * 0.04}>
             <article className="interactive-row rounded-lg px-2 py-6 md:px-4">
-              <p className="text-center text-xs text-muted md:text-left">
+              <p className="text-xs text-muted">
                 {report.publishedAt
                   ? formatDateNL(report.publishedAt)
                   : formatDateNL(report.createdAt)}
                 {report.category ? ` · ${report.category.name}` : ""}
                 {report.channel ? ` · ${report.channel}` : ""}
               </p>
-              <h2 className="mt-1 text-center text-xl font-semibold text-ink md:text-left">
+              <h2 className="mt-1 text-xl font-semibold text-ink">
                 {report.title}
               </h2>
-              <p className="mx-auto mt-2 max-w-3xl text-center text-sm leading-relaxed text-muted md:mx-0 md:text-left">
+              <p className="mx-auto mt-2 max-w-3xl text-sm leading-relaxed text-muted">
                 {report.description}
               </p>
               {report.domain && (
-                <div className="mt-3 flex justify-center md:justify-start">
+                <div className="mt-3 flex justify-center">
                   <Link
                     href={`/controleren/${report.domain.domain}`}
                     className="text-sm font-semibold text-accent hover:underline"
@@ -117,8 +117,9 @@ export default async function MeldingenPage({
           </AnimatedItem>
         ))}
         {reports.length === 0 && (
-          <p className="py-10 text-center text-muted md:text-left">
-            Geen meldingen in deze filter.
+          <p className="py-10 text-muted">
+            Binnenkort gaat de vernieuwde versie voor alle meldingen en scams
+            melden online.
           </p>
         )}
       </div>

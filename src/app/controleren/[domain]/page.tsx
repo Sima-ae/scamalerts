@@ -133,7 +133,7 @@ export default async function DomainResultPage({
       <div className="ambient-wash pointer-events-none absolute inset-0" aria-hidden />
 
       {/* Compact search strip */}
-      <div className="relative z-10 border-b border-line/80 bg-white/50 backdrop-blur-sm">
+      <div className="relative z-10 border-b border-line/80 bg-background">
         <div className="section-shell py-5 md:py-6">
           <div className="mx-auto w-full max-w-2xl lg:mx-0">
             <DomainSearch initial={domain} />

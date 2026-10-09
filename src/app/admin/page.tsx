@@ -12,7 +12,12 @@ export default async function AdminPage() {
   const [pending, stats] = await Promise.all([
     prisma.scamReport.findMany({
       where: { status: "PENDING" },
-      include: { domain: true, category: true, author: true },
+      include: {
+        domain: true,
+        category: true,
+        author: true,
+        evidence: { select: { id: true, filename: true, mimeType: true } },
+      },
       orderBy: { createdAt: "asc" },
       take: 50,
     }),
@@ -71,6 +76,14 @@ export default async function AdminPage() {
                     "geen domein"}
                   {report.reporterEmail ? ` · ${report.reporterEmail}` : ""}
                 </p>
+                {report.evidence.length > 0 && (
+                  <p className="mt-2 text-xs text-ink">
+                    {report.evidence.length}{" "}
+                    {report.evidence.length === 1 ? "bijlage" : "bijlagen"}
+                    {": "}
+                    {report.evidence.map((f) => f.filename).join(", ")}
+                  </p>
+                )}
               </div>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <form action={moderateReport} className="w-full sm:w-auto">

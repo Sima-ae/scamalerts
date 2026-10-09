@@ -4,6 +4,11 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { analyzeDomain } from "@/lib/trust-score";
 import { normalizeDomain } from "@/lib/utils";
+import {
+  EVIDENCE_MAX_FILES,
+  isAllowedEvidenceFile,
+  saveEvidenceFile,
+} from "@/lib/evidence-upload";
 
 const schema = z.object({
   title: z.string().min(8).max(200),
@@ -16,10 +21,48 @@ const schema = z.object({
   amountLost: z.union([z.string(), z.number()]).optional().nullable(),
 });
 
+function field(form: FormData, key: string): string {
+  const value = form.get(key);
+  return typeof value === "string" ? value : "";
+}
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const data = schema.parse(body);
+    const form = await req.formData();
+    const data = schema.parse({
+      title: field(form, "title"),
+      description: field(form, "description"),
+      domain: field(form, "domain") || null,
+      channel: field(form, "channel") || null,
+      categoryId: field(form, "categoryId") || null,
+      reporterName: field(form, "reporterName") || null,
+      reporterEmail: field(form, "reporterEmail") || null,
+      amountLost: field(form, "amountLost") || null,
+    });
+
+    const files = form
+      .getAll("evidence")
+      .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+
+    if (files.length > EVIDENCE_MAX_FILES) {
+      return NextResponse.json(
+        { error: `Je kunt maximaal ${EVIDENCE_MAX_FILES} bestanden toevoegen.` },
+        { status: 400 },
+      );
+    }
+
+    for (const file of files) {
+      if (!isAllowedEvidenceFile(file)) {
+        return NextResponse.json(
+          {
+            error:
+              "Bijlagen moeten een afbeelding (JPG, PNG, WebP, GIF) of PDF zijn van maximaal 5 MB.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const session = await auth();
 
     let domainId: string | undefined;
@@ -28,8 +71,6 @@ export async function POST(req: Request) {
 
     if (data.domain?.trim()) {
       let domain = normalizeDomain(data.domain);
-      // Reuse cached analysis — analyzeDomain persists DomainProfile.
-      // A failed or invalid analysis must not block saving the report.
       const analysis = await analyzeDomain(domain).catch(() => null);
       if (analysis) {
         domain = analysis.domain;
@@ -67,6 +108,19 @@ export async function POST(req: Request) {
         status: "PENDING",
       },
     });
+
+    for (const file of files) {
+      const saved = await saveEvidenceFile(report.id, file);
+      await prisma.evidenceFile.create({
+        data: {
+          reportId: report.id,
+          filename: saved.filename,
+          storagePath: saved.storagePath,
+          mimeType: saved.mimeType,
+          sizeBytes: saved.sizeBytes,
+        },
+      });
+    }
 
     return NextResponse.json({ id: report.id }, { status: 201 });
   } catch (err) {

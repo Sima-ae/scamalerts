@@ -6,7 +6,7 @@ const ITEMS = tickerItems();
 export function TopicMarquee() {
   return (
     <div
-      className="marquee relative w-full overflow-hidden border-y border-line bg-white/70 py-4 backdrop-blur-sm md:py-5"
+      className="marquee relative w-full overflow-hidden border-y border-line bg-background py-4 md:py-5"
       aria-label="Scam-vormen en Trust Score-onderwerpen"
     >
       <div className="marquee-track flex w-max items-center">

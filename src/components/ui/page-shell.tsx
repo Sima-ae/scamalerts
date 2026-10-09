@@ -52,7 +52,7 @@ export function PageBanner({
     <section className="page-banner relative w-full">
       {media && <MediaFrame media={media} overlay="ink" priority />}
       <div className="section-shell relative z-10 py-16 md:py-20 lg:py-24">
-        <div className="mx-auto max-w-3xl text-center md:max-w-4xl">
+        <div className="mx-auto max-w-3xl text-center md:max-w-4xl lg:max-w-5xl xl:max-w-6xl">
           {eyebrow && (
             <p className="animate-rise text-xs font-semibold uppercase tracking-[0.2em] text-[#f3a37a]">
               {eyebrow}
@@ -62,7 +62,7 @@ export function PageBanner({
             {title}
           </h1>
           {description && (
-            <p className="animate-rise-delay mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/75 md:text-lg">
+            <p className="animate-rise-delay mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/75 md:max-w-none md:whitespace-nowrap md:text-lg">
               {description}
             </p>
           )}
