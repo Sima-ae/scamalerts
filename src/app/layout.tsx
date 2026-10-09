@@ -16,7 +16,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? BRAND_URL),
   title: {
-    default: `${BRAND_NAME} — Website controleren & scams melden`,
+    default: `${BRAND_NAME} — Website controleren en scams melden`,
     template: `%s | ${BRAND_NAME}`,
   },
   description:

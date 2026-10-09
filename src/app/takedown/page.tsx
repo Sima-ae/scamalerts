@@ -7,7 +7,7 @@ export default function TakedownPage() {
   return (
     <PageShell
       narrow
-      hero={{ eyebrow: "Juridisch", title: "Notice & takedown" }}
+      hero={{ eyebrow: "Juridisch", title: "Notice en takedown" }}
     >
       <p className="leading-relaxed text-muted">
         Denk je dat content op {BRAND_NAME} onrechtmatig is of feitelijk

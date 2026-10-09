@@ -5,6 +5,8 @@ import { trustLabelNL } from "@/lib/trust-score";
 import { PageShell } from "@/components/ui/page-shell";
 import { MEDIA } from "@/lib/media";
 import { AnimatedItem } from "@/components/ui/animated-section";
+import { loadSubcategoryFilters } from "@/lib/categories";
+import { findTaxonomyBySlug } from "@/content/kennisbank/taxonomy";
 
 export const dynamic = "force-dynamic";
 
@@ -20,19 +22,31 @@ export default async function MeldingenPage({
   searchParams: Promise<{ categorie?: string }>;
 }) {
   const sp = await searchParams;
-  const categories = await prisma.category.findMany({
-    orderBy: { name: "asc" },
-  }).catch(() => []);
+  const categories = await loadSubcategoryFilters();
+  const filter = sp.categorie ? findTaxonomyBySlug(sp.categorie) : null;
 
-  const reports = await prisma.scamReport.findMany({
-    where: {
-      status: "APPROVED",
-      ...(sp.categorie ? { category: { slug: sp.categorie } } : {}),
-    },
-    include: { domain: true, category: true },
-    orderBy: { publishedAt: "desc" },
-    take: 50,
-  }).catch(() => []);
+  const categoryFilter = sp.categorie
+    ? filter?.kind === "parent"
+      ? {
+          OR: [
+            { category: { slug: filter.parent.slug } },
+            { category: { parent: { slug: filter.parent.slug } } },
+          ],
+        }
+      : { category: { slug: sp.categorie } }
+    : {};
+
+  const reports = await prisma.scamReport
+    .findMany({
+      where: {
+        status: "APPROVED",
+        ...categoryFilter,
+      },
+      include: { domain: true, category: true },
+      orderBy: { publishedAt: "desc" },
+      take: 50,
+    })
+    .catch(() => []);
 
   return (
     <PageShell

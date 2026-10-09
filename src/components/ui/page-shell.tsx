@@ -40,7 +40,7 @@ export function PageShell({
   );
 }
 
-/** Full-bleed ink banner with animated grid and optional photo/video. */
+/** Full-bleed ink banner with optional photo/video. */
 export function PageBanner({
   eyebrow,
   title,

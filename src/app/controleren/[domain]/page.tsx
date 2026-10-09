@@ -346,7 +346,7 @@ export default async function DomainResultPage({
         {/* Sources & method */}
         <section className="mt-14 rounded-xl border border-line bg-white/60 p-5 text-center md:mt-16 md:p-6 md:text-left">
           <h2 className="font-display text-xl text-ink md:text-2xl">
-            Bronnen &amp; methode
+            Bronnen en methode
           </h2>
           <p className="mx-auto mt-2 max-w-3xl text-sm leading-relaxed text-muted md:mx-0">
             Elke scan haalt de gegevens live op bij onderstaande bronnen. De

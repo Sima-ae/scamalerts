@@ -119,8 +119,14 @@ model Category {
   description String?  @db.Text
   createdAt   DateTime @default(now())
 
+  parentId String?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+
   reports  ScamReport[]
   articles Article[]
+
+  @@index([parentId])
 }
 
 model DomainProfile {

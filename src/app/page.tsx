@@ -15,51 +15,46 @@ import {
   Briefcase,
   Heart,
   TrendingUp,
-  Clapperboard,
+  Gauge,
   ArrowRight,
   Link2,
   ScanSearch,
-  Gauge,
+  Building2,
+  MessageCircle,
+  Store,
+  ShieldQuestion,
 } from "lucide-react";
+import { homepageTopics } from "@/content/kennisbank/taxonomy";
 
 export const dynamic = "force-dynamic";
 
+const topicIcons: Record<string, typeof ShoppingBag> = {
+  "online-winkelen": ShoppingBag,
+  "bank-phishing": Landmark,
+  overheid: Building2,
+  "whatsapp-tikkie": MessageCircle,
+  marktplaats: Store,
+  "investeringen-crypto": TrendingUp,
+  vacatures: Briefcase,
+  romantiek: Heart,
+  "trust-score": ShieldQuestion,
+};
+
 const topics = [
+  ...homepageTopics()
+    .filter((t) => t.slug !== "trust-score")
+    .slice(0, 5)
+    .map((t) => ({
+      href: `/kennisbank?onderwerp=${t.slug}`,
+      icon: topicIcons[t.slug] ?? Gauge,
+      title: t.title,
+      text: t.text,
+    })),
   {
-    href: "/kennisbank?onderwerp=online-winkelen",
-    icon: ShoppingBag,
-    title: "Online winkelen",
-    text: "Nepwebshops, te mooie kortingen en betaaltrucs herkennen vóór je afrekent.",
-  },
-  {
-    href: "/kennisbank?onderwerp=bank-phishing",
-    icon: Landmark,
-    title: "Bank & betalen",
-    text: "Valse sms’jes, nagebootste bankportalen en verdachte Tikkie- of iDEAL-links.",
-  },
-  {
-    href: "/kennisbank?onderwerp=vacatures",
-    icon: Briefcase,
-    title: "Vacatures",
-    text: "Registratiekosten, nep-recruiters en aanbiedingen die te soepel klinken.",
-  },
-  {
-    href: "/kennisbank?onderwerp=romantiek",
-    icon: Heart,
-    title: "Dating & romantiek",
-    text: "Emotionele druk, plotselinge geldvragen en profielen die niet kloppen.",
-  },
-  {
-    href: "/kennisbank?onderwerp=investeringen-crypto",
-    icon: TrendingUp,
-    title: "Beleggen & crypto",
-    text: "Onrealistische rendementen, verborgen voorwaarden en recovery-trucs.",
-  },
-  {
-    href: "/kennisbank",
-    icon: Clapperboard,
-    title: "Meer onderwerpen",
-    text: "Van Marktplaats tot DigiD-nabootsing: alle gidsen op één plek.",
+    href: "/kennisbank?onderwerp=trust-score",
+    icon: ShieldQuestion,
+    title: "Hoe wordt een score bepaald",
+    text: "DNS, TLS, leeftijd, nabootsing en bronnen — wat we meten en waarom.",
   },
 ];
 
@@ -108,7 +103,7 @@ export default async function HomePage() {
     <div className="w-full">
       <section className="hero-plane relative w-full">
         <MediaFrame media={MEDIA.hero} priority overlay="ink" />
-        <div className="section-shell relative z-10 grid items-center gap-12 py-14 md:min-h-[min(92vh,920px)] md:py-24 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+        <div className="section-shell relative z-10 grid items-center gap-10 py-12 md:min-h-[min(calc(100svh-9.75rem+40px),820px)] md:gap-12 md:py-16 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
           <div className="mx-auto w-full max-w-3xl text-center lg:mx-0 lg:text-left">
             <h1 className="animate-rise mx-auto max-w-xl text-xl font-medium text-white md:text-2xl lg:mx-0">
               Weet je zeker dat die website te vertrouwen is?
@@ -193,10 +188,10 @@ export default async function HomePage() {
             </div>
             <Link
               href="/meldingen"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent transition-all hover:gap-2.5"
+              className="btn-ink group gap-2 text-sm"
             >
               Alles bekijken
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
             </Link>
           </div>
 

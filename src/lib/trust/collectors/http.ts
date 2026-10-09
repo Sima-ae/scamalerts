@@ -3,7 +3,7 @@ import type { TrustSignal } from "@/lib/trust/types";
 import type { DomainParts } from "@/lib/trust/domain-parts";
 import { resolveRedirectHost } from "@/lib/trust/redirect";
 
-const base = { key: "https", label: "Bereikbaarheid & doorverwijzing", weight: 12, group: "technisch" as const };
+const base = { key: "https", label: "Bereikbaarheid en doorverwijzing", weight: 12, group: "technisch" as const };
 
 export async function collectHttp(parts: DomainParts): Promise<TrustSignal[]> {
   const finalHost = await resolveRedirectHost(parts.host);

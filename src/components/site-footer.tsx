@@ -14,11 +14,13 @@ export function SiteFooter() {
       />
       <div className="section-shell relative z-10 grid gap-12 py-16 md:grid-cols-4 md:gap-10 md:py-20">
         <div className="text-center md:col-span-2 md:text-left">
-          <img
-            src="/all-scams-name-light.png"
-            alt="All Scams"
-            className="brand-logo-footer mx-auto md:mx-0"
-          />
+          <Link href="/" className="inline-block">
+            <img
+              src="/all-scams-name-light.png"
+              alt="All Scams"
+              className="brand-logo-footer mx-auto md:mx-0"
+            />
+          </Link>
           <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-white/65 md:mx-0">
             Check websites, telefoonnummers en betaalverzoeken. Deel
             scam-ervaringen zodat anderen sneller doorhebben wat er speelt — met
@@ -59,7 +61,7 @@ export function SiteFooter() {
         </div>
         <div className="text-center md:text-left">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-            Juridisch & hulp
+            Juridisch en hulp
           </p>
           <ul className="mt-4 space-y-2.5 text-sm">
             <li>

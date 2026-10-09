@@ -128,15 +128,6 @@ a {
   }
 }
 
-@keyframes drift {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  to {
-    transform: translate3d(-2.5%, 1.8%, 0) scale(1.04);
-  }
-}
-
 @keyframes mesh-shift {
   0% {
     background-position: 0% 40%, 100% 60%, 50% 100%;
@@ -159,12 +150,13 @@ a {
   }
 }
 
+/* Keep a constant overscan scale so panning never reveals the frame edge */
 @keyframes pan-x {
   from {
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(2.25%, 0, 0) scale(1.14);
   }
   to {
-    transform: translate3d(-6%, 0, 0);
+    transform: translate3d(-2.25%, 0, 0) scale(1.14);
   }
 }
 
@@ -176,11 +168,16 @@ a {
   .animate-rise,
   .animate-rise-delay,
   .animate-rise-late,
-  .hero-plane::before,
   .ambient-wash,
   .media-frame img,
+  .media-frame video,
   .float-soft {
     animation: none !important;
+  }
+
+  .media-frame img,
+  .media-frame video {
+    transform: none;
   }
 }
 
@@ -204,27 +201,13 @@ a {
   font-family: var(--font-display);
 }
 
-/* Full-bleed hero with photo/video + animated grid */
+/* Full-bleed hero with photo/video */
 .hero-plane {
   position: relative;
   overflow: hidden;
-  min-height: min(92vh, 920px);
+  min-height: min(calc(100svh - 9.75rem + 40px), 820px);
   color: #f5f7fa;
   background: #0f1c2e;
-}
-
-.hero-plane::before {
-  content: "";
-  position: absolute;
-  inset: -12%;
-  z-index: 1;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: radial-gradient(ellipse 75% 65% at 55% 40%, black, transparent 78%);
-  animation: drift 22s linear infinite alternate;
-  pointer-events: none;
 }
 
 .hero-plane::after {
@@ -240,6 +223,8 @@ a {
 
 .media-frame img,
 .media-frame video {
+  transform-origin: center center;
+  backface-visibility: hidden;
   animation: pan-x 28s ease-in-out infinite alternate;
   will-change: transform;
 }
@@ -473,27 +458,13 @@ a {
   }
 }
 
-/* Inner page banner: ink plane + drifting grid, same language as the hero */
+/* Inner page banner: ink plane, same language as the hero */
 .page-banner {
   position: relative;
   overflow: hidden;
   isolation: isolate;
   background: linear-gradient(160deg, #1a334f 0%, #0f1c2e 60%, #2a1a14 100%);
   color: #f5f7fa;
-}
-
-.page-banner::before {
-  content: "";
-  position: absolute;
-  inset: -12%;
-  z-index: 1;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 70% 80% at 50% 50%, black, transparent 80%);
-  animation: drift 24s linear infinite alternate;
-  pointer-events: none;
 }
 
 .page-banner::after {
@@ -576,7 +547,6 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-banner::before,
   .marquee-track,
   .preview-row,
   .step-line {

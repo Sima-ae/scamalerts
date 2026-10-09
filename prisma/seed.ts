@@ -1,213 +1,101 @@
 import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { KENNISBANK_TAXONOMY } from "../src/content/kennisbank/taxonomy";
+import { KENNISBANK_ARTICLES } from "../src/content/kennisbank/articles";
 
 const prisma = new PrismaClient();
 
-const categories = [
-  {
-    name: "Online winkelen",
-    slug: "online-winkelen",
-    description: "Nepwebshops, non-delivery en betaalfraude.",
-  },
-  {
-    name: "Bank & phishing",
-    slug: "bank-phishing",
-    description: "Valse bankmails, sms en spoofing van Nederlandse banken.",
-  },
-  {
-    name: "Belastingdienst & overheid",
-    slug: "overheid",
-    description: "Nabootsing van Belastingdienst, DigiD of gemeenten.",
-  },
-  {
-    name: "WhatsApp & Tikkie",
-    slug: "whatsapp-tikkie",
-    description: "Familie-noodscenario’s, valse Tikkies en iDEAL-links.",
-  },
-  {
-    name: "Marktplaats",
-    slug: "marktplaats",
-    description: "Vooruitbetaling, valse kopers en pakketscams.",
-  },
-  {
-    name: "Investeringen & crypto",
-    slug: "investeringen-crypto",
-    description: "Nepbeleggingen, recovery-scams en valse brokers.",
-  },
-  {
-    name: "Vacatures",
-    slug: "vacatures",
-    description: "Nepbanen, registratiekosten en identiteitsfraude.",
-  },
-  {
-    name: "Romantiek",
-    slug: "romantiek",
-    description: "Romance scams en catfishing voor financieel gewin.",
-  },
-];
+async function seedTaxonomy() {
+  for (const parent of KENNISBANK_TAXONOMY) {
+    const parentRow = await prisma.category.upsert({
+      where: { slug: parent.slug },
+      update: {
+        name: parent.name,
+        description: parent.description,
+        parentId: null,
+      },
+      create: {
+        slug: parent.slug,
+        name: parent.name,
+        description: parent.description,
+      },
+    });
 
-const articles = [
-  {
-    slug: "herken-belastingdienst-phishing",
-    title: "Belastingdienst-phishing herkennen in 2026",
-    excerpt:
-      "Hoe je valse sms’jes en e-mails ontmaskert die zich voordoen als de Belastingdienst — en wat je wél mag verwachten van echte berichten.",
-    categorySlug: "overheid",
-    content: `## Waarom dit zo vaak werkt
+    for (const child of parent.children) {
+      await prisma.category.upsert({
+        where: { slug: child.slug },
+        update: {
+          name: child.name,
+          description: child.description,
+          parentId: parentRow.id,
+        },
+        create: {
+          slug: child.slug,
+          name: child.name,
+          description: child.description,
+          parentId: parentRow.id,
+        },
+      });
+    }
+  }
+}
 
-Scammers lenen de autoriteit van de Belastingdienst. Ze creëren spoed: een teruggave die “vervalt”, een boete, of een DigiD die “geblokkeerd” zou zijn. Die druk zorgt ervoor dat mensen klikken vóórdat ze nadenken.
-
-## Signalen om op te letten
-
-- Links die niet eindigen op belastingdienst.nl
-- Verzoeken om te betalen via Tikkie, giftcards of crypto
-- Dreigementen met directe beslaglegging zonder duidelijk dossiernummer
-- Generieke begroetingen of opvallend slordige taal
-- Bijlagen of QR-codes die je naar een inlogpagina sturen
-
-## Wat je beter wél doet
-
-1. Open geen link uit het bericht
-2. Ga zelf naar belastingdienst.nl via je browser of de officiële app
-3. Meld het via All Scams en via Fraudehelpdesk
-4. Doe aangifte bij de politie als er geld of gegevens zijn weggelekt`,
-  },
-  {
-    slug: "nepwebshops-en-te-mooie-kortingen",
-    title: "Nepwebshops herkennen vóór je afrekent",
-    excerpt:
-      "Onrealistische kortingen, vage contactgegevens en rare betaalroutes: zo spot je een nepshop voordat het geld weg is.",
-    categorySlug: "online-winkelen",
-    content: `## Het klassieke plaatje
-
-Een webshop belooft merkkleding of elektronica met een korting die te mooi is om waar te zijn. De site ziet er strak uit, reviews staan erbij, en afrekenen lijkt vertrouwd — tot levering uitblijft of de klantenservice verdwijnt.
-
-## Rode vlaggen
-
-- Domein is net geregistreerd of lijkt op een bekende shop met een typfout
-- Alleen vooruitbetaling via persoonlijke Tikkie, crypto of giftcards
-- Geen KvK, geen fysiek adres, of een adres dat niet klopt
-- Reviews die allemaal dezelfde toon hebben
-- Retourbeleid ontbreekt of is onmogelijk streng
-
-## Voor je betaalt
-
-Check het domein op All Scams, zoek naar onafhankelijke ervaringen en wantrouw “nu of nooit”-druk. Bij twijfel: niet betalen en elders bestellen.`,
-  },
-  {
-    slug: "whatsapp-familie-en-valse-tikkies",
-    title: "WhatsApp-familie-scams en valse Tikkies",
-    excerpt:
-      "Een bericht van ‘mama’ of ‘je kind’ met spoed en een betaallink. Zo herken je de truc en bescherm je je contacten.",
-    categorySlug: "whatsapp-tikkie",
-    content: `## Hoe de truc werkt
-
-Iemand kaapt of nabootst een WhatsApp-account en speelt een familielid in nood. Er is haast, schaamte of geheimhouding (“vertel het papa niet”). Daarna volgt een Tikkie of iDEAL-link.
-
-## Wat je kunt checken
-
-- Bel of app het familielid via een ander kanaal
-- Let op afwijkende schrijfstijl of plotselinge urgentie
-- Weiger betaallinks zolang je niet 100% zeker bent
-- Vraag een foto of een gezamenlijke inside joke die alleen jullie kennen
-
-## Na een betaling
-
-Blokkeer het gesprek, bewaar screenshots, meld bij je bank, Fraudehelpdesk en All Scams. Waarschuw familie zodat de keten stopt.`,
-  },
-  {
-    slug: "valse-vacatures-en-registratiekosten",
-    title: "Valse vacatures: wanneer een ‘baan’ om geld vraagt",
-    excerpt:
-      "Te mooie thuiswerkbanen, registratiefees en nep-recruiters. Zo bescherm je je gegevens én je portemonnee.",
-    categorySlug: "vacatures",
-    content: `## Waarom job-scams toenemen
-
-Werkzoekenden zijn gemotiveerd en vaak bereid snel te reageren. Scammers misbruiken dat met glamoureuze functietitels, vage bedrijven en druk om “vandaag nog” te starten.
-
-## Alarmbellen
-
-- Je moet betalen om te solliciteren of materialen te ontvangen
-- Het bedrijf is niet terug te vinden via KvK of een serieus LinkedIn-profiel
-- Gesprekken verlopen alleen via chat of privémail
-- Ze vragen om kopieën van ID, bankpas of DigiD zonder duidelijke reden
-
-## Beter zo
-
-Solliciteer via officiële kanalen, verifieer de werkgever en deel nooit betaalgegevens voor een ‘onboarding’. Twijfel? Controleer namen en domeinen op All Scams.`,
-  },
-  {
-    slug: "investeringsbeloftes-die-te-mooi-zijn",
-    title: "Investeringsbeloftes die te mooi klinken",
-    excerpt:
-      "Gegarandeerd rendement, pushende ‘accountmanagers’ en recovery-scams: zo blijf je uit de fuik.",
-    categorySlug: "investeringen-crypto",
-    content: `## Het verhaal dat ze verkopen
-
-Hoge winst, weinig risico, en een vriendelijke coach die je helpt “instappen”. Vaak volgt druk om meer te storten. Als je wilt opnemen, verschijnen er opeens kosten of verdwijnt de support.
-
-## Let hierop
-
-- Gegarandeerde rendementen bestaan vrijwel nooit
-- Platforms zonder duidelijke vergunning of bedrijfslocatie
-- Opnames die steeds worden uitgesteld
-- Mensen die je via social media “toevallig” helpen beleggen
-
-## Als je al geld hebt overgemaakt
-
-Stop verdere betalingen, bewaar bewijs, meld bij Fraudehelpdesk en politie. Wantrouw ook “recovery”-diensten die beloven je geld terug te halen tegen vooruitbetaling — dat is vaak een tweede scam.`,
-  },
-  {
-    slug: "marktplaats-vooruitbetaling-trucs",
-    title: "Marktplaats-trucs: vooruitbetaling en valse kopers",
-    excerpt:
-      "Te snelle deals, betaalverzoeken buiten het platform en ‘bezorgers’ die geld vragen. Praktische checks voor kopers en verkopers.",
-    categorySlug: "marktplaats",
-    content: `## Populaire scenario’s
-
-Kopers die te graag vooruitbetalen via een rare link, verkopers die alleen via Tikkie willen afrekenen, of ‘PostNL’-berichten over een toeslag vóór levering.
-
-## Simpele regels
-
-- Houd betaling en communicatie waar mogelijk binnen het platform
-- Wantrouw druk om buiten Marktplaats om verder te gaan
-- Check of het betaalverzoek echt bij het juiste bedrijf hoort
-- Bij ophalen: afspreken op een openbare plek
-
-Meld verdachte accounts en domeinen ook op All Scams, zodat anderen sneller dezelfde truc herkennen.`,
-  },
-];
-
-async function main() {
-  for (const cat of categories) {
-    await prisma.category.upsert({
-      where: { slug: cat.slug },
-      update: cat,
-      create: cat,
+async function seedArticles() {
+  const keepSlugs = KENNISBANK_ARTICLES.map((a) => a.slug);
+  for (const article of KENNISBANK_ARTICLES) {
+    const category = await prisma.category.findUnique({
+      where: { slug: article.categorySlug },
+    });
+    await prisma.article.upsert({
+      where: { slug: article.slug },
+      update: {
+        title: article.title,
+        excerpt: article.excerpt,
+        content: article.content,
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+        categoryId: category?.id,
+      },
+      create: {
+        title: article.title,
+        slug: article.slug,
+        excerpt: article.excerpt,
+        content: article.content,
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+        categoryId: category?.id,
+      },
     });
   }
+  await prisma.article.deleteMany({
+    where: { slug: { notIn: keepSlugs } },
+  });
+}
 
+async function main() {
   const passwordHash = await bcrypt.hash("AdminAllScams2026!", 12);
   await prisma.user.upsert({
     where: { email: "admin@all-scams.com" },
-    update: { role: Role.ADMIN, passwordHash, name: "Beheerder" },
+    update: { passwordHash, role: Role.ADMIN, name: "All Scams Admin" },
     create: {
       email: "admin@all-scams.com",
-      name: "Beheerder",
-      role: Role.ADMIN,
+      name: "All Scams Admin",
       passwordHash,
-      emailVerified: new Date(),
+      role: Role.ADMIN,
     },
   });
 
+  await seedTaxonomy();
+  await seedArticles();
+
   const shopping = await prisma.category.findUnique({
-    where: { slug: "online-winkelen" },
+    where: { slug: "nepwebshops" },
   });
   const phishing = await prisma.category.findUnique({
-    where: { slug: "bank-phishing" },
+    where: { slug: "phishing-sms" },
   });
   const jobs = await prisma.category.findUnique({
-    where: { slug: "vacatures" },
+    where: { slug: "valse-vacatures" },
   });
 
   const domains = [
@@ -314,32 +202,6 @@ async function main() {
     }
   }
 
-  for (const article of articles) {
-    const category = await prisma.category.findUnique({
-      where: { slug: article.categorySlug },
-    });
-    await prisma.article.upsert({
-      where: { slug: article.slug },
-      update: {
-        title: article.title,
-        excerpt: article.excerpt,
-        content: article.content,
-        status: "PUBLISHED",
-        publishedAt: new Date(),
-        categoryId: category?.id,
-      },
-      create: {
-        title: article.title,
-        slug: article.slug,
-        excerpt: article.excerpt,
-        content: article.content,
-        status: "PUBLISHED",
-        publishedAt: new Date(),
-        categoryId: category?.id,
-      },
-    });
-  }
-
   await prisma.siteSetting.upsert({
     where: { key: "site" },
     update: {
@@ -359,7 +221,9 @@ async function main() {
     },
   });
 
-  console.log("Seed voltooid: categorieën, admin, meldingen, artikelen.");
+  console.log(
+    `Seed voltooid: ${KENNISBANK_TAXONOMY.length} hoofdgroepen, ${KENNISBANK_ARTICLES.length} artikelen.`,
+  );
 }
 
 main()

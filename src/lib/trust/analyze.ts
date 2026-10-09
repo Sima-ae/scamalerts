@@ -208,7 +208,7 @@ export async function analyzeDomain(
     { key: "dns_resolve", label: "DNS-resolutie", group: "technisch", run: () => collectDns(parts) },
     { key: "tls", label: "TLS-certificaat", group: "certificaat", run: () => collectTls(parts) },
     { key: "rdap_age", label: "Domeinregistratie", group: "certificaat", run: () => collectRdap(parts) },
-    { key: "https", label: "Bereikbaarheid & doorverwijzing", group: "technisch", run: () => collectHttp(parts) },
+    { key: "https", label: "Bereikbaarheid en doorverwijzing", group: "technisch", run: () => collectHttp(parts) },
     { key: "community", label: "Community-meldingen", group: "community", run: async () => (await collectReports(domain)).signals },
     { key: "spoof", label: "Merk- en domeinnabootsing", group: "heuristiek", run: () => collectSpoof(parts, tranco) },
   ];
@@ -264,9 +264,9 @@ export async function analyzeDomain(
 export function groupSignals(signals: TrustSignal[]) {
   const order: TrustSignalGroup[] = ["reputatie", "heuristiek", "certificaat", "technisch", "community"];
   const labels: Record<TrustSignalGroup, string> = {
-    reputatie: "Reputatie & dreigingslijsten",
-    heuristiek: "Nabootsing & domeinnaam",
-    certificaat: "Registratie & certificaat",
+    reputatie: "Reputatie en dreigingslijsten",
+    heuristiek: "Nabootsing en domeinnaam",
+    certificaat: "Registratie en certificaat",
     technisch: "Technisch",
     community: "Community",
   };

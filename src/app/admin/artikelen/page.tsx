@@ -2,14 +2,15 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { createArticle } from "@/app/admin/artikelen/actions";
+import { loadCategoryOptGroups } from "@/lib/categories";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminArticlesPage() {
   await requireRole(["ADMIN", "EDITOR"]);
-  const [articles, categories] = await Promise.all([
+  const [articles, categoryGroups] = await Promise.all([
     prisma.article.findMany({ orderBy: { updatedAt: "desc" }, take: 50 }),
-    prisma.category.findMany({ orderBy: { name: "asc" } }),
+    loadCategoryOptGroups(),
   ]);
 
   return (
@@ -51,10 +52,14 @@ export default async function AdminArticlesPage() {
         />
         <select name="categoryId" className="input-field">
           <option value="">Geen categorie</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
+          {categoryGroups.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.options.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <label className="flex items-center justify-center gap-2 text-sm text-ink md:justify-start">

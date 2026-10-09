@@ -30,4 +30,7 @@ export async function createArticle(formData: FormData) {
 
   revalidatePath("/admin/artikelen");
   revalidatePath("/kennisbank");
+  if (publish && slug) {
+    revalidatePath(`/kennisbank/${slug}`);
+  }
 }

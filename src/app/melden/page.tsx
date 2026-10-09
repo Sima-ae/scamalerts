@@ -1,7 +1,7 @@
 import { ReportForm } from "@/components/report-form";
-import { prisma } from "@/lib/prisma";
 import { PageShell } from "@/components/ui/page-shell";
 import { MEDIA } from "@/lib/media";
+import { loadCategoryOptGroups } from "@/lib/categories";
 
 export const dynamic = "force-dynamic";
 
@@ -17,9 +17,7 @@ export default async function MeldenPage({
   searchParams: Promise<{ domain?: string }>;
 }) {
   const sp = await searchParams;
-  const categories = await prisma.category.findMany({
-    orderBy: { name: "asc" },
-  }).catch(() => []);
+  const categories = await loadCategoryOptGroups();
 
   return (
     <PageShell

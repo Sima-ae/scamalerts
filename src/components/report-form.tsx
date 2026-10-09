@@ -3,13 +3,16 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Category = { id: string; name: string; slug: string };
+type CategoryGroup = {
+  label: string;
+  options: { id: string; name: string; slug: string }[];
+};
 
 export function ReportForm({
   categories,
   initialDomain = "",
 }: {
-  categories: Category[];
+  categories: CategoryGroup[];
   initialDomain?: string;
 }) {
   const router = useRouter();
@@ -65,10 +68,14 @@ export function ReportForm({
           <label className="text-sm font-medium text-ink">Categorie</label>
           <select name="categoryId" className="input-field mt-1">
             <option value="">Kies een categorie</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
+            {categories.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.options.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>

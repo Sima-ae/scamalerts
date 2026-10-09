@@ -28,7 +28,7 @@ export default async function AdminPage() {
         Admin
       </p>
       <h1 className="font-display mt-2 text-4xl text-ink">
-        Moderatie & overzicht
+        Moderatie en overzicht
       </h1>
 
       <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm md:justify-start">
