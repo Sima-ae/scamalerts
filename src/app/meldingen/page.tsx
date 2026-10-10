@@ -6,6 +6,7 @@ import { trustLabelNL } from "@/lib/trust-score";
 import { PageShell } from "@/components/ui/page-shell";
 import { MEDIA } from "@/lib/media";
 import { AnimatedItem } from "@/components/ui/animated-section";
+import { MeldingCard } from "@/components/melding-card";
 import {
   MeldingenSearch,
   type MeldingenSearchItem,
@@ -53,22 +54,15 @@ function toSearchItem(report: {
   const dateLabel = report.publishedAt
     ? formatDateNL(report.publishedAt)
     : formatDateNL(report.createdAt);
-  const meta = [dateLabel, categoryName, report.channel]
-    .filter(Boolean)
-    .join(" · ");
-
-  const domainLabel =
-    report.domain != null
-      ? `${report.domain.domain} · ${trustLabelNL(report.domain.trustLabel)} (${report.domain.trustScore}/100)`
-      : null;
 
   return {
     id: report.id,
     title: report.title,
     description: report.description,
-    meta,
-    domain: domainName,
-    domainLabel,
+    dateLabel,
+    categoryName,
+    identifier: domainName ?? report.identifierValue,
+    trustLabel: report.domain ? trustLabelNL(report.domain.trustLabel) : null,
     haystack: normalizeSearchText(
       [
         report.title,
@@ -164,40 +158,23 @@ export default async function MeldingenPage({
           ))}
         </div>
 
-        <div className="mx-auto mt-10 max-w-3xl divide-y divide-line text-center">
+        <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {reports.map((report, i) => (
             <AnimatedItem key={report.id} delay={Math.min(i, 5) * 0.04}>
-              <article className="interactive-row rounded-lg px-2 py-6 md:px-4">
-                <p className="text-xs text-muted">
-                  {report.publishedAt
-                    ? formatDateNL(report.publishedAt)
-                    : formatDateNL(report.createdAt)}
-                  {report.category ? ` · ${report.category.name}` : ""}
-                  {report.channel ? ` · ${report.channel}` : ""}
-                </p>
-                <h2 className="mt-1 text-xl font-semibold text-ink">
-                  {report.title}
-                </h2>
-                <p className="mx-auto mt-2 max-w-3xl text-sm leading-relaxed text-muted">
-                  {report.description}
-                </p>
-                {report.domain && (
-                  <div className="mt-3 flex justify-center">
-                    <Link
-                      href={`/controleren/${report.domain.domain}`}
-                      className="text-sm font-semibold text-accent hover:underline"
-                    >
-                      {report.domain.domain} ·{" "}
-                      {trustLabelNL(report.domain.trustLabel)} (
-                      {report.domain.trustScore}/100)
-                    </Link>
-                  </div>
-                )}
-              </article>
+              <MeldingCard
+                dateLabel={formatDateNL(report.publishedAt ?? report.createdAt)}
+                categoryName={report.category?.name}
+                title={report.title}
+                description={report.description}
+                identifier={report.domain?.domain ?? report.identifierValue}
+                trustLabel={
+                  report.domain ? trustLabelNL(report.domain.trustLabel) : null
+                }
+              />
             </AnimatedItem>
           ))}
           {reports.length === 0 && (
-            <p className="py-10 text-muted">
+            <p className="col-span-full py-10 text-center text-muted">
               Binnenkort gaat de vernieuwde versie voor alle meldingen en scams
               melden online.
             </p>

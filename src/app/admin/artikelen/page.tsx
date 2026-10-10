@@ -45,7 +45,7 @@ export default async function AdminArticlesPage({
 
       <form className="mt-6 flex flex-col gap-3 sm:flex-row">
         <input name="q" defaultValue={sp.q ?? ""} placeholder="Zoek op titel, slug of categorie" className="input-field sm:max-w-sm" />
-        <select name="status" defaultValue={status} className="input-field sm:max-w-[12rem]">
+        <select name="status" defaultValue={status} className="input-field sm:max-w-48">
           <option value="ALL">Alle statussen</option>
           <option value="PUBLISHED">Live</option>
           <option value="DRAFT">Concept</option>

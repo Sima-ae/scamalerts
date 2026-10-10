@@ -1,21 +1,17 @@
 "use client";
 
-import {
-  useDeferredValue,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-import Link from "next/link";
+import { useMemo, useState, type ReactNode } from "react";
 import { SiteSearchField } from "@/components/ui/site-search-field";
+import { MeldingCard } from "@/components/melding-card";
 
 export type MeldingenSearchItem = {
   id: string;
   title: string;
   description: string;
-  meta: string;
-  domain: string | null;
-  domainLabel: string | null;
+  dateLabel: string;
+  categoryName: string | null;
+  identifier: string | null;
+  trustLabel: string | null;
   haystack: string;
 };
 
@@ -35,25 +31,16 @@ function matches(haystack: string, query: string) {
   return terms.every((term) => haystack.includes(term));
 }
 
-function ReportRow({ item }: { item: MeldingenSearchItem }) {
+function ReportCard({ item }: { item: MeldingenSearchItem }) {
   return (
-    <article className="interactive-row rounded-lg px-2 py-6 md:px-4">
-      <p className="text-xs text-muted">{item.meta}</p>
-      <h2 className="mt-1 text-xl font-semibold text-ink">{item.title}</h2>
-      <p className="mx-auto mt-2 max-w-3xl text-sm leading-relaxed text-muted">
-        {item.description}
-      </p>
-      {item.domain && item.domainLabel && (
-        <div className="mt-3 flex justify-center">
-          <Link
-            href={`/controleren/${item.domain}`}
-            className="text-sm font-semibold text-accent hover:underline"
-          >
-            {item.domainLabel}
-          </Link>
-        </div>
-      )}
-    </article>
+    <MeldingCard
+      dateLabel={item.dateLabel}
+      categoryName={item.categoryName}
+      title={item.title}
+      description={item.description}
+      identifier={item.identifier}
+      trustLabel={item.trustLabel}
+    />
   );
 }
 
@@ -65,14 +52,13 @@ export function MeldingenSearch({
   children: ReactNode;
 }) {
   const [query, setQuery] = useState("");
-  const deferredQuery = useDeferredValue(query);
   const searching = query.trim().length > 0;
 
   const results = useMemo(() => {
-    const q = deferredQuery.trim();
+    const q = query.trim();
     if (!q) return [];
     return reports.filter((report) => matches(report.haystack, q));
-  }, [reports, deferredQuery]);
+  }, [reports, query]);
 
   return (
     <>
@@ -95,9 +81,9 @@ export function MeldingenSearch({
       </div>
 
       {searching ? (
-        <div className="mx-auto max-w-3xl divide-y divide-line text-center">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {results.map((item) => (
-            <ReportRow key={item.id} item={item} />
+            <ReportCard key={item.id} item={item} />
           ))}
         </div>
       ) : (

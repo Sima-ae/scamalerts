@@ -8,6 +8,7 @@ import { SplitFeature } from "@/components/home/split-feature";
 import { prisma } from "@/lib/prisma";
 import { formatDateNL } from "@/lib/utils";
 import { trustLabelNL } from "@/lib/trust-score";
+import { MeldingCard } from "@/components/melding-card";
 import { MEDIA } from "@/lib/media";
 import {
   ShoppingBag,
@@ -198,28 +199,16 @@ export default async function HomePage() {
             <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {reports.map((report, i) => (
                 <AnimatedItem key={report.id} delay={Math.min(i, 5) * 0.05}>
-                  <article className="flex h-full flex-col rounded-xl border border-line bg-white/80 p-5 text-center transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-[0_20px_40px_-30px_rgba(15,28,46,0.45)] md:text-left">
-                    <p className="text-xs text-muted">
-                      {formatDateNL(report.publishedAt ?? report.createdAt)}
-                      {report.category ? ` · ${report.category.name}` : ""}
-                    </p>
-                    <h3 className="mt-2 text-lg font-semibold text-ink">
-                      {report.title}
-                    </h3>
-                    <p className="mt-2 line-clamp-3 flex-1 text-sm leading-relaxed text-muted">
-                      {report.description}
-                    </p>
-                    <div className="mt-4 flex flex-wrap items-center justify-center gap-x-2 border-t border-line pt-3 text-sm md:justify-between">
-                      <span className="font-semibold text-ink">
-                        {report.domain?.domain ?? report.identifierValue ?? "—"}
-                      </span>
-                      {report.domain && (
-                        <span className="text-accent">
-                          {trustLabelNL(report.domain.trustLabel)}
-                        </span>
-                      )}
-                    </div>
-                  </article>
+                  <MeldingCard
+                    dateLabel={formatDateNL(report.publishedAt ?? report.createdAt)}
+                    categoryName={report.category?.name}
+                    title={report.title}
+                    description={report.description}
+                    identifier={report.domain?.domain ?? report.identifierValue}
+                    trustLabel={
+                      report.domain ? trustLabelNL(report.domain.trustLabel) : null
+                    }
+                  />
                 </AnimatedItem>
               ))}
             </div>
