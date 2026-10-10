@@ -25,7 +25,7 @@ import {
   ShieldQuestion,
 } from "lucide-react";
 import { homepageTopics } from "@/content/kennisbank/taxonomy";
-import { listCatalogGuides } from "@/lib/kennisbank-catalog";
+import { listPublishedGuides } from "@/lib/guides";
 
 export const dynamic = "force-dynamic";
 
@@ -89,8 +89,10 @@ async function loadReports() {
 }
 
 export default async function HomePage() {
-  const reports = await loadReports();
-  const articles = listCatalogGuides().slice(0, 3);
+  const [reports, articles] = await Promise.all([
+    loadReports(),
+    listPublishedGuides().then((guides) => guides.slice(0, 3)),
+  ]);
 
   return (
     <div className="w-full">

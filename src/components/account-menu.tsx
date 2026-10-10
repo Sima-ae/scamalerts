@@ -9,9 +9,11 @@ import { UserRound } from "lucide-react";
 export function AccountMenu({
   loggedIn,
   isStaff,
+  dashboardHref,
 }: {
   loggedIn: boolean;
   isStaff: boolean;
+  dashboardHref: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -65,7 +67,7 @@ export function AccountMenu({
         >
           <Link
             role="menuitem"
-            href="/dashboard"
+            href={dashboardHref}
             onClick={() => setOpen(false)}
             className="block px-3 py-2.5 text-sm text-ink transition hover:bg-background hover:text-accent"
           >
@@ -82,11 +84,11 @@ export function AccountMenu({
           {isStaff && (
             <Link
               role="menuitem"
-              href="/admin"
+              href="/user/dashboard"
               onClick={() => setOpen(false)}
               className="block px-3 py-2.5 text-sm text-ink transition hover:bg-background hover:text-accent"
             >
-              Admin
+              Mijn meldingen
             </Link>
           )}
           <button

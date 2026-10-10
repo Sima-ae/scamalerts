@@ -35,7 +35,7 @@ export async function middleware(req: NextRequest) {
   if (path.startsWith("/admin")) {
     const role = token.role as string | undefined;
     if (role !== "ADMIN" && role !== "EDITOR") {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+      return NextResponse.redirect(new URL("/user/dashboard", req.url));
     }
   }
 
@@ -46,6 +46,8 @@ export const config = {
   matcher: [
     "/dashboard",
     "/dashboard/:path*",
+    "/user/dashboard",
+    "/user/dashboard/:path*",
     "/admin",
     "/admin/:path*",
     "/profiel",

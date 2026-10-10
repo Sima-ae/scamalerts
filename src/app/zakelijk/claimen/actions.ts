@@ -45,5 +45,5 @@ export async function claimDomain(formData: FormData) {
     data: { role: session.user.role === "USER" ? "BUSINESS" : session.user.role },
   });
 
-  redirect("/dashboard");
+  redirect("/user/dashboard");
 }

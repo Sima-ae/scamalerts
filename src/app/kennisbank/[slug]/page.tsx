@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { BRAND_NAME } from "@/lib/brand";
 import { ArticleBody } from "@/components/kennisbank/article-body";
 import { GuideCard } from "@/components/kennisbank/guide-card";
-import { getCatalogGuide, relatedGuides } from "@/lib/kennisbank-catalog";
+import { getPublishedGuide, listPublishedGuides } from "@/lib/guides";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = getCatalogGuide(slug);
+  const article = await getPublishedGuide(slug);
   if (!article) return { title: "Artikel" };
   return {
     title: article.title,
@@ -28,10 +28,18 @@ export default async function ArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = getCatalogGuide(slug);
+  const article = await getPublishedGuide(slug);
   if (!article) notFound();
 
-  const related = relatedGuides(article);
+  const published = await listPublishedGuides();
+  const related = published
+    .filter(
+      (item) =>
+        item.slug !== article.slug &&
+        (item.categorySlug === article.categorySlug ||
+          (article.parentSlug && item.parentSlug === article.parentSlug)),
+    )
+    .slice(0, 3);
   const isTrustGuide =
     article.categorySlug === "trust-score" || article.parentSlug === "trust-score";
 

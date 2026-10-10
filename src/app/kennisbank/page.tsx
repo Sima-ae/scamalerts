@@ -10,10 +10,10 @@ import {
   type KennisbankSearchItem,
 } from "@/components/kennisbank/kennisbank-search";
 import {
-  countGuidesForSlug,
-  guidesForTaxonomy,
-  listCatalogGuides,
-} from "@/lib/kennisbank-catalog";
+  countInTopic,
+  guidesInTopic,
+  listPublishedGuides,
+} from "@/lib/guides";
 import {
   KENNISBANK_TAXONOMY,
   findTaxonomyBySlug,
@@ -45,8 +45,8 @@ export default async function KennisbankPage({
   const sp = await searchParams;
   const filter = sp.onderwerp ? findTaxonomyBySlug(sp.onderwerp) : null;
 
-  const catalog = listCatalogGuides();
-  const articles = filter ? guidesForTaxonomy(filter) : catalog.slice(0, 9);
+  const catalog = await listPublishedGuides();
+  const articles = filter ? guidesInTopic(catalog, filter) : catalog.slice(0, 9);
 
   const searchArticles: KennisbankSearchItem[] = catalog.map((article) => ({
     slug: article.slug,
@@ -68,7 +68,7 @@ export default async function KennisbankPage({
 
   const parentCards = KENNISBANK_TAXONOMY.map((parent) => ({
     ...parent,
-    articleCount: countGuidesForSlug(parent.slug),
+    articleCount: countInTopic(catalog, parent.slug),
     subcategoryCount: parent.children.length,
   }));
 

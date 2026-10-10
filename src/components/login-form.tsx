@@ -37,7 +37,7 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto w-full max-w-md space-y-4 text-center">
+    <form method="post" onSubmit={onSubmit} className="mx-auto w-full max-w-md space-y-4 text-center">
       <div>
         <label className="text-sm font-medium text-ink">E-mail</label>
         <input

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
+import { dashboardPath } from "@/lib/dashboard-path";
 import { AccountMenu } from "@/components/account-menu";
 import { MobileNav } from "@/components/mobile-nav";
 import { HeaderFrame } from "@/components/header-frame";
@@ -44,7 +45,7 @@ export async function SiteHeader() {
             (session.user.role === "ADMIN" ||
               session.user.role === "EDITOR") && (
               <Link
-                href="/admin"
+                href="/admin/dashboard"
                 className="hidden rounded-md px-3 py-2 text-sm text-ink/80 hover:bg-white sm:inline"
               >
                 Admin
@@ -58,7 +59,11 @@ export async function SiteHeader() {
               Inloggen
             </Link>
           )}
-          <AccountMenu loggedIn={Boolean(session?.user)} isStaff={isStaff} />
+          <AccountMenu
+            loggedIn={Boolean(session?.user)}
+            isStaff={isStaff}
+            dashboardHref={dashboardPath(session?.user?.role)}
+          />
           <Link
             href="/melden"
             className="btn-ink whitespace-nowrap px-3 py-2 text-sm"

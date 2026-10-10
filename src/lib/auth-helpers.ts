@@ -10,6 +10,6 @@ export async function requireUser() {
 
 export async function requireRole(roles: Role[]) {
   const session = await requireUser();
-  if (!roles.includes(session.user.role)) redirect("/dashboard");
+  if (!roles.includes(session.user.role)) redirect("/user/dashboard");
   return session;
 }

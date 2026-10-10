@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth-helpers";
+import { dashboardPath } from "@/lib/dashboard-path";
 import { signOut } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -47,12 +48,12 @@ export default async function ProfilePage() {
       </dl>
 
       <div className="mt-8 flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap md:justify-start">
-        <Link href="/dashboard" className="btn-primary w-full sm:w-auto">
+        <Link href={dashboardPath(role)} className="btn-primary w-full sm:w-auto">
           Ga naar Dashboard
         </Link>
         {(role === "ADMIN" || role === "EDITOR") && (
           <Link
-            href="/admin"
+            href="/admin/dashboard"
             className="inline-flex w-full items-center justify-center rounded-md border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink/30 sm:w-auto"
           >
             Admin

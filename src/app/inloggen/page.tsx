@@ -4,12 +4,13 @@ import { Suspense } from "react";
 import { LoginForm } from "@/components/login-form";
 import { BRAND_NAME } from "@/lib/brand";
 import { auth } from "@/lib/auth";
+import { dashboardPath } from "@/lib/dashboard-path";
 
 export const metadata = { title: "Inloggen" };
 
 export default async function LoginPage() {
   const session = await auth();
-  if (session?.user?.id) redirect("/dashboard");
+  if (session?.user?.id) redirect(dashboardPath(session.user.role));
 
   return (
     <div className="relative overflow-hidden">
