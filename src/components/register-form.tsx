@@ -2,10 +2,8 @@
 
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
 export function RegisterForm() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -30,14 +28,18 @@ export function RegisterForm() {
       setError(data.error ?? "Registratie mislukt.");
       return;
     }
-    await signIn("credentials", {
+    const signedIn = await signIn("credentials", {
       email: payload.email,
       password: payload.password,
       redirect: false,
+      callbackUrl: "/dashboard",
     });
-    setLoading(false);
-    router.push("/dashboard");
-    router.refresh();
+    if (!signedIn || signedIn.error || signedIn.ok === false) {
+      setLoading(false);
+      setError("Account aangemaakt, maar inloggen lukte niet. Log zelf in.");
+      return;
+    }
+    window.location.assign("/dashboard");
   }
 
   return (

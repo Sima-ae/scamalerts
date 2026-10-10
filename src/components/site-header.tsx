@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { UserRound } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { AccountMenu } from "@/components/account-menu";
 import { MobileNav } from "@/components/mobile-nav";
 import { HeaderFrame } from "@/components/header-frame";
 
@@ -13,8 +13,8 @@ const links = [
 
 export async function SiteHeader() {
   const session = await auth();
-  const accountHref = session?.user ? "/dashboard" : "/registreren";
-  const accountLabel = session?.user ? "Dashboard" : "Account";
+  const isStaff =
+    session?.user?.role === "ADMIN" || session?.user?.role === "EDITOR";
 
   return (
     <HeaderFrame>
@@ -58,14 +58,7 @@ export async function SiteHeader() {
               Inloggen
             </Link>
           )}
-          <Link
-            href={accountHref}
-            aria-label={accountLabel}
-            title={accountLabel}
-            className="inline-flex items-center justify-center rounded-md border border-line bg-white p-2 text-ink transition hover:border-ink/30 hover:bg-white"
-          >
-            <UserRound className="h-5 w-5" aria-hidden />
-          </Link>
+          <AccountMenu loggedIn={Boolean(session?.user)} isStaff={isStaff} />
           <Link
             href="/melden"
             className="btn-ink whitespace-nowrap px-3 py-2 text-sm"

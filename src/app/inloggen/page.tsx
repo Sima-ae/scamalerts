@@ -1,10 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { LoginForm } from "@/components/login-form";
 import { BRAND_NAME } from "@/lib/brand";
+import { auth } from "@/lib/auth";
 
 export const metadata = { title: "Inloggen" };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const session = await auth();
+  if (session?.user?.id) redirect("/dashboard");
+
   return (
     <div className="relative overflow-hidden">
       <div className="ambient-wash pointer-events-none absolute inset-0" aria-hidden />
@@ -22,7 +28,9 @@ export default function LoginPage() {
           </Link>
         </p>
         <div className="mx-auto mt-10 max-w-md">
-          <LoginForm />
+          <Suspense>
+            <LoginForm />
+          </Suspense>
         </div>
       </div>
     </div>

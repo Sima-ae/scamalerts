@@ -2,10 +2,10 @@
 
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 export function LoginForm() {
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -14,18 +14,26 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
     const form = new FormData(e.currentTarget);
-    const res = await signIn("credentials", {
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-      redirect: false,
-    });
-    setLoading(false);
-    if (res?.error) {
-      setError("Ongeldige inloggegevens.");
-      return;
+    const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+    const destination = callbackUrl.startsWith("/") ? callbackUrl : "/dashboard";
+
+    try {
+      const res = await signIn("credentials", {
+        email: String(form.get("email")),
+        password: String(form.get("password")),
+        redirect: false,
+        callbackUrl: destination,
+      });
+      if (!res || res.error || res.ok === false) {
+        setError("Ongeldige inloggegevens.");
+        setLoading(false);
+        return;
+      }
+      window.location.assign(res.url && res.url.startsWith("/") ? res.url : destination);
+    } catch {
+      setError("Inloggen lukt nu niet. Probeer het opnieuw.");
+      setLoading(false);
     }
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (
@@ -36,6 +44,7 @@ export function LoginForm() {
           name="email"
           type="email"
           required
+          autoComplete="email"
           className="input-field mt-1"
         />
       </div>
@@ -45,6 +54,7 @@ export function LoginForm() {
           name="password"
           type="password"
           required
+          autoComplete="current-password"
           className="input-field mt-1"
         />
       </div>

@@ -2,10 +2,27 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+function sessionCookieName(req: NextRequest) {
+  const names = req.cookies.getAll().map((cookie) => cookie.name);
+  if (names.some((name) => name.startsWith("__Secure-authjs.session-token"))) {
+    return "__Secure-authjs.session-token";
+  }
+  if (names.some((name) => name.startsWith("authjs.session-token"))) {
+    return "authjs.session-token";
+  }
+  return req.nextUrl.protocol === "https:"
+    ? "__Secure-authjs.session-token"
+    : "authjs.session-token";
+}
+
 export async function middleware(req: NextRequest) {
+  const cookieName = sessionCookieName(req);
   const token = await getToken({
     req,
     secret: process.env.AUTH_SECRET,
+    secureCookie: cookieName.startsWith("__Secure-"),
+    cookieName,
+    salt: cookieName,
   });
   const path = req.nextUrl.pathname;
 
@@ -26,5 +43,14 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/zakelijk/claimen/:path*"],
+  matcher: [
+    "/dashboard",
+    "/dashboard/:path*",
+    "/admin",
+    "/admin/:path*",
+    "/profiel",
+    "/profiel/:path*",
+    "/zakelijk/claimen",
+    "/zakelijk/claimen/:path*",
+  ],
 };
