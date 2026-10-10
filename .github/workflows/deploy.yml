@@ -139,9 +139,27 @@ jobs:
 
           pm2 startOrReload ecosystem.config.cjs --update-env
           pm2 save
-          sleep 3
-          CODE=\$(curl -fsS -o /dev/null -w "%{http_code}" http://127.0.0.1:3010/ || echo 000)
-          echo "Health: \$CODE"
-          test "\$CODE" = "200"
+
+          # Fork-mode reload kills the old process before the new one listens.
+          # Under load Next standalone often needs >3s; poll until ready.
+          CODE="000"
+          for i in \$(seq 1 30); do
+            CODE=\$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 5 \
+              http://127.0.0.1:3010/ 2>/dev/null || true)
+            [[ -z "\$CODE" ]] && CODE="000"
+            echo "Health attempt \$i/30: \$CODE"
+            if [[ "\$CODE" = "200" ]]; then
+              break
+            fi
+            sleep 2
+          done
+
+          if [[ "\$CODE" != "200" ]]; then
+            echo "ERROR: health check failed after reload (last=\$CODE)"
+            pm2 describe all-scams || true
+            pm2 logs all-scams --lines 80 --nostream || true
+            exit 1
+          fi
+
           echo "Deployed all-scams.com on port 3010"
           EOF
