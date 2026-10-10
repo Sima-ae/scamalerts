@@ -123,8 +123,7 @@ export default function ZakelijkPage() {
               <p>
                 Met {brand} voor bedrijven kun je het juiste domein claimen,
                 bereikbaar zijn bij meldingen en laten zien hoe mensen jullie
-                officieel herkennen — zonder paniektaal en zonder de
-                onafhankelijkheid van risicoscores aan te tasten.
+                officieel herkennen.
               </p>
             </Section>
 

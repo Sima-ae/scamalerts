@@ -29,7 +29,7 @@ export const businessHighlights = [
   },
   {
     title: "Echte kanalen tonen",
-    text: "Help klanten herkennen hoe ze jullie officieel bereiken — zonder paniekzaaierij.",
+    text: "Help klanten herkennen hoe ze jullie officieel kunnen bereiken.",
   },
 ] as const;
 

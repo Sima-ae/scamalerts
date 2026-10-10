@@ -46,7 +46,7 @@ export default function OverOnsPage() {
         eyebrow: "Platform",
         title: `Over ${brand}`,
         description:
-          "Onafhankelijk, Nederlandstalig en zonder paniektaal: zo helpen we je online fraude eerder te herkennen.",
+          "Onafhankelijk en volledige onderzoeken van scams: zo helpen we je online fraude eerder te herkennen.",
         media: MEDIA.hero,
       }}
     >
@@ -123,7 +123,7 @@ export default function OverOnsPage() {
             <Section id="missie" title="1. Missie">
               <p>
                 {brand} helpt mensen sneller te herkennen wanneer iets niet
-                pluis voelt — zonder paniektaal, vage claims of valse zekerheid.
+                in orde of nep is — zonder paniektaal, vage claims of valse zekerheid.
                 We willen dat je betere vragen stelt voordat je betaalt,
                 inlogt of persoonlijke gegevens deelt.
               </p>

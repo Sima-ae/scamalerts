@@ -21,7 +21,7 @@ export const aboutHighlights = [
   },
   {
     title: "Nederlandstalig",
-    text: "Duidelijke uitleg zonder paniektaal — gemaakt voor mensen in NL/BE.",
+    text: "Duidelijke uitleg over alle scams en nep websites.",
   },
   {
     title: "Signalen + context",
@@ -71,7 +71,7 @@ export const approachSteps = [
   },
   {
     title: "Redactionele uitleg",
-    text: "De kennisbank vertaalt signalen naar begrijpelijke stappen — zonder paniekzaaierij.",
+    text: "De kennisbank vertaalt signalen naar begrijpelijke stappen.",
   },
 ] as const;
 

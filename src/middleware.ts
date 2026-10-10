@@ -2,6 +2,23 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+const forwardedHeaderNames = ["origin", "host", "x-forwarded-host", "x-forwarded-proto"] as const;
+
+function firstHeaderValue(value: string) {
+  return value.split(",")[0]?.trim() ?? "";
+}
+
+function withSingleForwardedHeaders(req: NextRequest) {
+  const headers = new Headers(req.headers);
+  for (const name of forwardedHeaderNames) {
+    const current = headers.get(name);
+    if (!current?.includes(",")) continue;
+    const first = firstHeaderValue(current);
+    if (first) headers.set(name, first);
+  }
+  return NextResponse.next({ request: { headers } });
+}
+
 function sessionCookieName(req: NextRequest) {
   const names = req.cookies.getAll().map((cookie) => cookie.name);
   if (names.some((name) => name.startsWith("__Secure-authjs.session-token"))) {
@@ -39,7 +56,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return withSingleForwardedHeaders(req);
 }
 
 export const config = {

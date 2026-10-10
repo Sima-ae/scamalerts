@@ -13,6 +13,7 @@ module.exports = {
         NODE_ENV: "production",
         PORT: "3010",
         HOSTNAME: "127.0.0.1",
+        NODE_OPTIONS: "-r /home/all-scams.com/app/scripts/strip-duplicate-headers.js",
       },
     },
   ],

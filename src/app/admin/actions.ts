@@ -108,6 +108,12 @@ export async function saveReport(formData: FormData) {
     : null;
   if (!id || !title || !description || !reportStatuses.has(status)) return;
 
+  const existing = await prisma.scamReport.findUnique({
+    where: { id },
+    select: { publishedAt: true },
+  });
+  if (!existing) return;
+
   await prisma.scamReport.update({
     where: { id },
     data: {
@@ -117,7 +123,7 @@ export async function saveReport(formData: FormData) {
       risk,
       channel: channel || null,
       categoryId,
-      publishedAt: status === "APPROVED" ? new Date() : null,
+      publishedAt: status === "APPROVED" ? (existing.publishedAt ?? new Date()) : null,
     },
   });
   await prisma.moderationAction.create({

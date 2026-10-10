@@ -24,8 +24,7 @@ export function SiteFooter() {
           </Link>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/65 lg:max-w-none">
             Check websites, telefoonnummers en betaalverzoeken. Deel
-            scam-ervaringen zodat anderen sneller doorhebben wat er speelt — met
-            context, zonder paniekzaaierij.
+            scam-ervaringen zodat anderen sneller doorhebben welke scams er momenteel zijn.
           </p>
         </div>
 

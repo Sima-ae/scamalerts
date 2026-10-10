@@ -139,7 +139,7 @@ export default function ContentGuidelinesPage() {
             </Section>
 
             <Section id="doel" title="2. Waarom dit bestaat">
-              <p>We willen dat anderen sneller herkennen wat er speelt — met context, zonder paniekzaaierij. Goede content:</p>
+              <p>We willen dat anderen sneller herkennen welke scams er momenteel zijn.</p>
               <ul className="list-disc space-y-2 pl-5">
                 <li>waarschuwt op basis van concrete signalen;</li>
                 <li>helpt patronen herkennen (druk, nabootsing, betaaltrucs);</li>
