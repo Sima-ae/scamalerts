@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { loadCategoryOptGroups } from "@/lib/categories";
 import { deleteReport, saveReport } from "@/app/admin/actions";
 import { requireRole } from "@/lib/auth-helpers";
+import { RiskSelect } from "@/components/admin/risk-select";
+import { riskFromTrustLabel } from "@/lib/report-risk";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +64,12 @@ export default async function AdminReportEditPage({
             <option value="REJECTED">Afgewezen</option>
             <option value="HIDDEN">Verborgen</option>
           </select>
+        </label>
+        <label className="block text-sm font-medium text-ink">
+          Risico
+          <RiskSelect
+            defaultValue={report.risk ?? riskFromTrustLabel(report.domain?.trustLabel) ?? ""}
+          />
         </label>
         <label className="block text-sm font-medium text-ink">
           Categorie

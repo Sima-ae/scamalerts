@@ -23,6 +23,12 @@ enum ReportStatus {
   HIDDEN
 }
 
+enum ReportRisk {
+  HIGH
+  LOW
+  NONE
+}
+
 enum TrustLabel {
   VERY_LIKELY_UNSAFE
   HIGH_RISK
@@ -157,6 +163,7 @@ model ScamReport {
   reporterName   String?
   reporterEmail  String?
   status         ReportStatus @default(PENDING)
+  risk           ReportRisk?
   identifierType String?
   identifierValue String?
   createdAt      DateTime     @default(now())

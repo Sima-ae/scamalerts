@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { ArticleStatus, ReportStatus } from "@prisma/client";
+import type { ArticleStatus, ReportRisk, ReportStatus } from "@prisma/client";
 import { requireRole } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { builtinGuide } from "@/lib/guides";
@@ -14,6 +14,8 @@ const reportStatuses = new Set<ReportStatus>([
   "REJECTED",
   "HIDDEN",
 ]);
+
+const reportRisks = new Set<ReportRisk>(["HIGH", "LOW", "NONE"]);
 
 const articleStatuses = new Set<ArticleStatus>([
   "DRAFT",
@@ -100,6 +102,10 @@ export async function saveReport(formData: FormData) {
   const status = String(formData.get("status") ?? "PENDING") as ReportStatus;
   const channel = String(formData.get("channel") ?? "").trim();
   const categoryId = String(formData.get("categoryId") ?? "") || null;
+  const riskValue = String(formData.get("risk") ?? "");
+  const risk = reportRisks.has(riskValue as ReportRisk)
+    ? (riskValue as ReportRisk)
+    : null;
   if (!id || !title || !description || !reportStatuses.has(status)) return;
 
   await prisma.scamReport.update({
@@ -108,6 +114,7 @@ export async function saveReport(formData: FormData) {
       title,
       description,
       status,
+      risk,
       channel: channel || null,
       categoryId,
       publishedAt: status === "APPROVED" ? new Date() : null,

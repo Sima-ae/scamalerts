@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { TrustLabel } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatDateNL } from "@/lib/utils";
-import { trustLabelNL } from "@/lib/trust-score";
+import { reportRiskView } from "@/lib/report-risk";
 import { PageShell } from "@/components/ui/page-shell";
 import { MEDIA } from "@/lib/media";
 import { AnimatedItem } from "@/components/ui/animated-section";
@@ -43,6 +43,7 @@ function toSearchItem(report: {
   publishedAt: Date | null;
   createdAt: Date;
   category: { name: string } | null;
+  risk: "HIGH" | "LOW" | "NONE" | null;
   domain: {
     domain: string;
     trustLabel: TrustLabel;
@@ -54,6 +55,7 @@ function toSearchItem(report: {
   const dateLabel = report.publishedAt
     ? formatDateNL(report.publishedAt)
     : formatDateNL(report.createdAt);
+  const risk = reportRiskView(report.risk, report.domain?.trustLabel);
 
   return {
     id: report.id,
@@ -62,7 +64,8 @@ function toSearchItem(report: {
     dateLabel,
     categoryName,
     identifier: domainName ?? report.identifierValue,
-    trustLabel: report.domain ? trustLabelNL(report.domain.trustLabel) : null,
+    trustLabel: risk?.label ?? null,
+    riskColor: risk?.color ?? null,
     haystack: normalizeSearchText(
       [
         report.title,
@@ -167,9 +170,8 @@ export default async function MeldingenPage({
                 title={report.title}
                 description={report.description}
                 identifier={report.domain?.domain ?? report.identifierValue}
-                trustLabel={
-                  report.domain ? trustLabelNL(report.domain.trustLabel) : null
-                }
+                trustLabel={reportRiskView(report.risk, report.domain?.trustLabel)?.label}
+                riskColor={reportRiskView(report.risk, report.domain?.trustLabel)?.color}
               />
             </AnimatedItem>
           ))}

@@ -7,8 +7,8 @@ import { ResultPreview } from "@/components/home/result-preview";
 import { SplitFeature } from "@/components/home/split-feature";
 import { prisma } from "@/lib/prisma";
 import { formatDateNL } from "@/lib/utils";
-import { trustLabelNL } from "@/lib/trust-score";
 import { MeldingCard } from "@/components/melding-card";
+import { reportRiskView } from "@/lib/report-risk";
 import { MEDIA } from "@/lib/media";
 import {
   ShoppingBag,
@@ -205,9 +205,8 @@ export default async function HomePage() {
                     title={report.title}
                     description={report.description}
                     identifier={report.domain?.domain ?? report.identifierValue}
-                    trustLabel={
-                      report.domain ? trustLabelNL(report.domain.trustLabel) : null
-                    }
+                    trustLabel={reportRiskView(report.risk, report.domain?.trustLabel)?.label}
+                    riskColor={reportRiskView(report.risk, report.domain?.trustLabel)?.color}
                   />
                 </AnimatedItem>
               ))}

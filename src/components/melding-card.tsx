@@ -5,6 +5,7 @@ export function MeldingCard({
   description,
   identifier,
   trustLabel,
+  riskColor,
 }: {
   dateLabel: string;
   categoryName?: string | null;
@@ -12,6 +13,7 @@ export function MeldingCard({
   description: string;
   identifier?: string | null;
   trustLabel?: string | null;
+  riskColor?: string | null;
 }) {
   return (
     <article className="flex h-full flex-col rounded-xl border border-line bg-white/80 p-5 text-center transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-[0_20px_40px_-30px_rgba(15,28,46,0.45)] md:text-left">
@@ -25,7 +27,11 @@ export function MeldingCard({
       </p>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-x-2 border-t border-line pt-3 text-sm md:justify-between">
         <span className="font-semibold text-ink">{identifier || "—"}</span>
-        {trustLabel && <span className="text-accent">{trustLabel}</span>}
+        {trustLabel && (
+          <span className="font-semibold" style={{ color: riskColor ?? "#c2410c" }}>
+            {trustLabel}
+          </span>
+        )}
       </div>
     </article>
   );

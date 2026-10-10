@@ -12,6 +12,7 @@ export type MeldingenSearchItem = {
   categoryName: string | null;
   identifier: string | null;
   trustLabel: string | null;
+  riskColor: string | null;
   haystack: string;
 };
 
@@ -40,6 +41,7 @@ function ReportCard({ item }: { item: MeldingenSearchItem }) {
       description={item.description}
       identifier={item.identifier}
       trustLabel={item.trustLabel}
+      riskColor={item.riskColor}
     />
   );
 }
